@@ -2,16 +2,9 @@
 
 A RESTful web service that returns closing stock prices from AlphaVantage.
 
-## Quick Start
+# Quick Start
 
-```bash
-# Run locally (APIKEY must be set in env variables)
-go run ./cmd/api
-
-# Test
-curl http://localhost:8080/v1/health
-curl http://localhost:8080/v1/stock
-```
+When running locally following environment variables are expected by the program:
 
 ## Configuration
 
@@ -21,6 +14,20 @@ curl http://localhost:8080/v1/stock
 | NDAYS | Number of days to return | 7 |
 | APIKEY | AlphaVantage API key | (required) |
 | SERVER_ADDRESS | Listen address | :8080 |
+
+Obtain your key following instructions [here](https://www.alphavantage.co/support/#api-key)
+
+## Run Locally
+
+```bash
+go run ./cmd/api
+# OR pass env vars explicitely
+APIKEY=<YOUKEY> NDAYS=5 SYMBOL=MSFT go run ./cmd/api
+
+# Test
+curl http://localhost:8080/v1/stock
+```
+
 
 ## Kubernetes Deployment
 
@@ -37,7 +44,7 @@ kubectl port-forward svc/stock-ticker 8080:80
 
 Install Taskfile: https://taskfile.dev/installation/
 
-On Mac:
+If you are on Mac install with `brew`:
 ```bash
 brew install go-task
 ```
