@@ -1,90 +1,122 @@
-# Goal
+# Stock Ticker API
 
-Implement a simple web restful api web server in go. We'll do it in two stages: core stage - implementation that satisfies all requirements and extras - additional features on best effort basis, with particular focus on application reliability.
+A RESTful web server in Go that returns closing stock prices from AlphaVantage.
 
-## Core Requirements Part
+## Implementation Status
 
-The core requirements can be found in `../aux/requirements-description.md` file.
-The endpoint described in the exercise might be rate limited, or not available, and we are not going to use it until very final testing stage. But it should be implemented in initial stage. (think TDD)
+### Core Requirements ✅
 
-This endpoint is tricky and it is now premium endpoint. We need to call the endpoint as described in the requirements, when it fails the original payload from the upstream must be relayed back to user, but we will also offer our instructions on the next best option - which is to call a downgraded version of this endpoint. We don't need to implement this particular fallback, just inform user so that they have meaningful information and a way forward.
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| GET endpoint for stock prices | ✅ | `/v1/stock` returns NDAYS closing prices + average |
+| Environment variables | ✅ | SYMBOL, NDAYS, APIKEY via ConfigMap/Secret |
+| Docker image | ✅ | golang:1.25-bookworm → distroless |
+| K8s manifests | ✅ | Deployment, Service, Ingress, ConfigMap |
+| Error handling with fallback hint | ✅ | Relays upstream payload + suggests `/v1/stock-fallback` |
+| Health endpoint | ✅ | `/v1/health` with git SHA version |
 
-The payload sample for the original endpoint is stored in `sample-payload.json`
+### Extras ✅
 
-Implemement bare minimum for core stage. Try to be concise, no fancy tests, no comments, no extra features, parameters or inputs.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Static fallback endpoint | ✅ | `/v1/stock-fallback` using STATIC_FALLBACK_URL |
+| Cloud Profiler | ✅ | Conditional: ENABLE_CLOUDPROFILER + GCP_PROJECT_ID |
+| Separate extra ConfigMap | ✅ | `k8s/configmap-extra.yaml` (optional mount) |
+| Separate extra Taskfile | ✅ | `Taskfile.extra.yaml` with `extra:` prefixed tasks |
+| DockerHub publishing | ✅ | `olmigar/stock-ticker` with git SHA |
+| Business logic tests | ✅ | `internal/stock/stock_test.go` |
 
-## Extras
-
-With Extras it is important that they are as stand alone as possible and do not interfere in any noticeable way with core functionality.
-They need to be clearly separated out so that code for core requirements can be easily understood. For example when adding tasks that are not required for Core, add them in "extra:" prefix and store them in a separate Taskfile. Core tasks should be in main Taskfile.
-
-I have an endpoint which is not ratelimited, does not require any keys or auth and returns the same content as the original one, we will use it for testing and expose it on a different endpoint on our app. We don't have staging env, so it needs to live in the same binary.
-
-```
-https://head-in-the-cloudz.com/experiments/73/static-fallback
-```
-
-Do not hardcode this endpoint but mount additional ConfigMap with extra parameters. from k8s perspective we will have to mount both configmaps to pods, but webserver should not rely on "extra" params - they need to be optional with sensible defaults.
-
-
-Additional parameters that might be needed:
-* `STATIC_FALLBACK_URL`
-* `GCP_PROJECT_ID` optional, default `""` and it is not used
-* `ENABLE_CLOUDPROFILER` optional, default false
-
-`GCP_PROJECT_ID` should not be committed to the repo, but you MUST use it from the env variables in the terminal - in this project we do rely on env variables.
-
-If cloud profiler is enabled and project is provided our app need to enable profiling (technically `GCP_PROJECT_ID` is not needed when it runs in the cloud, but this condition will keep it simple)
-
-This is snippet for cloud profiler taken from Google page. In our case we need to start it conditionally.
+## Project Structure
 
 ```
-package main
-
-import (
-	"cloud.google.com/go/profiler"
-)
-
-func main() {
-	cfg := profiler.Config{
-		Service:        "myservice",
-		ServiceVersion: "1.0.0",
-		// ProjectID must be set if not running on GCP.
-		// ProjectID: "my-project",
-	}
-
-	// Profiler initialization, best done as early as possible.
-	if err := profiler.Start(cfg); err != nil {
-		// TODO: Handle error.
-	}
-}
+.
+├── cmd/api/
+│   ├── main.go           # Entry point, profiler init, server setup
+│   ├── routes.go         # Chi router with groups and rate limiting
+│   ├── health.go         # Health endpoint handler
+│   ├── stock.go          # Stock endpoint handler
+│   ├── stock_fallback.go # Fallback endpoint handler
+│   ├── errors.go         # Standard error responses
+│   └── helpers.go        # JSON helpers
+├── internal/
+│   ├── config/           # Environment configuration
+│   ├── middleware/       # Rate limiter middleware
+│   └── stock/            # Business logic + tests
+├── k8s/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── configmap.yaml
+│   └── configmap-extra.yaml
+├── Dockerfile
+├── Taskfile.yaml
+├── Taskfile.extra.yaml
+└── README.md
 ```
 
-# Tools and Environment
+## Configuration
 
-## Cluster
+### Core (required for `/v1/stock`)
 
-Assume a kind or a minikube cluster exists. It is a vanilla k8s cluster, without service mesh or any fancy features
-IMPORTANT: In this project we need to work with current context in the terminal where this project is run, assume it is safe.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| SYMBOL | Stock symbol | MSFT |
+| NDAYS | Days to return | 7 |
+| APIKEY | AlphaVantage key | (required) |
 
-## Taskfile
+### Extras (optional)
 
-Taskfile - we will use Taskfile in this project, mention in the README with quick instructions how to install it. However user should be able to work with this project without extra tools.
-For this purpose, can you please add a section in the README, under expand (details html tag) a simple table that translates task commands to bash commands, only absolute minimum which is required for the Core Requirements
+| Variable | Description | Default |
+|----------|-------------|---------|
+| STATIC_FALLBACK_URL | Fallback data URL | (empty) |
+| ENABLE_CLOUDPROFILER | Enable profiler | false |
+| GCP_PROJECT_ID | GCP project | (empty) |
 
-## Image
+## Quick Commands
 
-Build stage: golang:1.25-bookworm
-Run stage: gcr.io/distroless/base-debian12
+```bash
+# Run locally
+go run ./cmd/api
 
-This is for potential extension to use Cloud Profiler, which might not work with Alpine.
+# Run with fallback
+STATIC_FALLBACK_URL=https://head-in-the-cloudz.com/experiments/73/static-fallback go run ./cmd/api
 
-# Project Structure
+# Run tests
+go test -v ./...
 
-I have a foundational working webserver skeleton here: ${HOME}/repos/experiments/73-2026.01-rust-go-webserver/go
+# Build and push to DockerHub
+task docker-build-push
 
-Take all golang folders and files as is, except leaving their business logic and handlers out e.g. `go/cmd/api/cpu.go`, `go/cmd/api/io.go`.
-Take Dockerfile but update to the image requiments outlined here.
-Take Taskfile but strip out registry, and anything else which is not relevant here.
-Take a look at README - it has some similar goals and ideas for future reliability features.
+# Deploy to k8s
+kubectl create secret generic stock-ticker-secret --from-literal=APIKEY=$APIKEY
+kubectl apply -f k8s/
+```
 
+## Architecture Decisions
+
+1. **Chi router** - Lightweight, stdlib-compatible, good middleware support
+2. **Router groups** - Health outside logging group, API endpoints with rate limiting
+3. **Rate limiting** - Per-endpoint using golang.org/x/time/rate
+4. **Distroless image** - Minimal attack surface, required for Cloud Profiler
+5. **Business logic separation** - `internal/stock/` package with testable functions
+6. **Optional extras** - ConfigMap with `optional: true`, code handles empty values
+
+## Future Considerations
+
+- Metrics endpoint for Prometheus
+- Structured logging with zerolog
+- Circuit breaker for upstream calls
+- Cache layer for stock data
+- Graceful degradation patterns
+
+---
+
+## Original Requirements Reference
+
+The original requirements from `../aux/requirements-description.md`:
+
+- Part 1: Stock ticker web service returning NDAYS closing prices with average
+- Part 2: Kubernetes manifests with ConfigMap and Secret
+- Part 3: Resilience considerations (implemented via rate limiting, fallback endpoint)
+
+Reference skeleton: `${HOME}/repos/experiments/73-2026.01-rust-go-webserver/go`
