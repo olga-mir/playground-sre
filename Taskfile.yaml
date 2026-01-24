@@ -1,0 +1,77 @@
+version: '3'
+
+vars:
+  IMAGE_NAME: stock-ticker
+  IMAGE: olmigar/{{.IMAGE_NAME}}
+  TAG: '{{.TAG | default "latest"}}'
+  LOCAL_PORT: 8080
+  SVC_NAME: stock-ticker
+  GIT_SHA:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+
+tasks:
+  build:
+    desc: Build the Go binary
+    cmds:
+      - go build -ldflags="-X main.gitSHA={{.GIT_SHA}}" -o server ./cmd/api
+
+  run:
+    desc: Run the server locally
+    cmds:
+      - go run ./cmd/api
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...
+
+  tidy:
+    desc: Tidy go modules
+    cmds:
+      - go mod tidy
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - docker build --build-arg GIT_SHA={{.GIT_SHA}} -t {{.IMAGE}}:{{.TAG}} .
+
+  docker-push:
+    desc: Push Docker image to DockerHub
+    cmds:
+      - docker push {{.IMAGE}}:{{.TAG}}
+
+  docker-build-push:
+    desc: Build and push Docker image to DockerHub
+    cmds:
+      - task: docker-build
+      - task: docker-push
+
+  k8s-apply:
+    desc: Apply Kubernetes manifests
+    cmds:
+      - kubectl apply -f k8s/
+
+  k8s-delete:
+    desc: Delete Kubernetes resources
+    cmds:
+      - kubectl delete -f k8s/
+
+  k8s-restart:
+    desc: Restart the deployment
+    cmds:
+      - kubectl rollout restart deployment/{{.SVC_NAME}}
+
+  port-forward:
+    desc: Port forward to the service
+    cmds:
+      - kubectl port-forward svc/{{.SVC_NAME}} {{.LOCAL_PORT}}:80
+
+  curl-health:
+    desc: Curl the health endpoint
+    cmds:
+      - curl -s http://localhost:{{.LOCAL_PORT}}/v1/health | jq .
+
+  curl-stock:
+    desc: Curl the stock endpoint
+    cmds:
+      - curl -s http://localhost:{{.LOCAL_PORT}}/v1/stock | jq .

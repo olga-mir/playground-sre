@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stock-ticker-config
+data:
+  SYMBOL: "MSFT"
+  NDAYS: "7"
