@@ -8,3 +8,5 @@ server
 .env
 .idea/
 .vscode/
+
+.setup-env

@@ -2,12 +2,30 @@ package stock
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"time"
+)
+
+const (
+	FieldClose        = "4. close"
+	FieldSymbol       = "2. Symbol"
+	DefaultTimeout    = 10 * time.Second
+	MaxNDays          = 365
+	MinNDays          = 1
+)
+
+var (
+	ErrUpstreamError    = errors.New("upstream error")
+	ErrRateLimited      = errors.New("API rate limit exceeded")
+	ErrInvalidResponse  = errors.New("invalid API response")
+	ErrNoData           = errors.New("no price data available")
+	ErrInvalidNDays     = errors.New("ndays must be between 1 and 365")
 )
 
 type AlphaVantageResponse struct {
@@ -29,17 +47,20 @@ type PriceEntry struct {
 	Close float64 `json:"close"`
 }
 
-type FetchResult struct {
-	Response    *Response
-	RawPayload  []byte
-	UpstreamErr bool
+type Service struct {
+	client *http.Client
 }
 
-func Fetch(url string) (*AlphaVantageResponse, []byte, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+func NewService() *Service {
+	return &Service{
+		client: &http.Client{Timeout: DefaultTimeout},
+	}
+}
+
+func (s *Service) Fetch(url string) (*AlphaVantageResponse, []byte, error) {
+	resp, err := s.client.Get(url)
 	if err != nil {
-		return nil, nil, fmt.Errorf("upstream error: %w", err)
+		return nil, nil, fmt.Errorf("%w: %v", ErrUpstreamError, err)
 	}
 	defer resp.Body.Close()
 
@@ -50,20 +71,32 @@ func Fetch(url string) (*AlphaVantageResponse, []byte, error) {
 
 	var avResp AlphaVantageResponse
 	if err := json.Unmarshal(body, &avResp); err != nil {
-		return nil, body, fmt.Errorf("failed to parse response: %w", err)
+		return nil, body, fmt.Errorf("%w: %v", ErrInvalidResponse, err)
 	}
 
 	return &avResp, body, nil
 }
 
-func Process(avResp *AlphaVantageResponse, symbol string, ndays int) (*Response, bool) {
-	if avResp.Error != "" || avResp.Note != "" || len(avResp.TimeSeries) == 0 {
-		return nil, true
+func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int) (*Response, error) {
+	if ndays < MinNDays || ndays > MaxNDays {
+		return nil, ErrInvalidNDays
+	}
+
+	if avResp.Note != "" {
+		return nil, fmt.Errorf("%w: %s", ErrRateLimited, avResp.Note)
+	}
+
+	if avResp.Error != "" {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidResponse, avResp.Error)
+	}
+
+	if len(avResp.TimeSeries) == 0 {
+		return nil, ErrNoData
 	}
 
 	prices := ExtractClosingPrices(avResp.TimeSeries, ndays)
 	if len(prices) == 0 {
-		return nil, true
+		return nil, ErrNoData
 	}
 
 	return &Response{
@@ -71,7 +104,7 @@ func Process(avResp *AlphaVantageResponse, symbol string, ndays int) (*Response,
 		NDays:         len(prices),
 		ClosingPrices: prices,
 		Average:       CalculateAverage(prices),
-	}, false
+	}, nil
 }
 
 func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
@@ -87,9 +120,10 @@ func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []
 
 	prices := make([]PriceEntry, 0, len(dates))
 	for _, date := range dates {
-		closeStr := timeSeries[date]["4. close"]
+		closeStr := timeSeries[date][FieldClose]
 		closeVal, err := strconv.ParseFloat(closeStr, 64)
 		if err != nil {
+			log.Printf("warning: failed to parse close price for %s: %v", date, err)
 			continue
 		}
 		prices = append(prices, PriceEntry{Date: date, Close: closeVal})

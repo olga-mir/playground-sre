@@ -26,9 +26,8 @@ func (app *application) RegisterRoutes(router chi.Router) {
 		r.With(cm.RateLimiter(1, 1, app.rateLimitExceededResponse)).
 			Get("/v1/stock", app.stockHandler)
 
-		// Fallback endpoint. It will call endpoint which returns static payload, which can be a few days old
-		// The upstream is public, no API key requirment and a very high ratelimit threshold.
-		// This client-side ratelimit is just a precaution from runaway testing script
+		// Fallback endpoint. It will call endpoint which returns static payload, with a few days old data.
+		// The upstream this endpoint is relying on is public, with no API key or ratelimiting
 		r.With(cm.RateLimiter(20, 5, app.rateLimitExceededResponse)).
 			Get("/v1/stock-fallback", app.stockFallbackHandler)
 	})

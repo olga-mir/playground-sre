@@ -1,5 +1,9 @@
 # Stock Ticker API
 
+[![Go](https://github.com/olmigar/playground-sre/actions/workflows/go.yml/badge.svg)](https://github.com/olmigar/playground-sre/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/olmigar/playground-sre)](https://goreportcard.com/report/github.com/olmigar/playground-sre)
+[![codecov](https://codecov.io/gh/olmigar/playground-sre/branch/main/graph/badge.svg)](https://codecov.io/gh/olmigar/playground-sre)
+
 A RESTful web service that returns closing stock prices from AlphaVantage.
 
 # Quick Start
@@ -57,8 +61,8 @@ brew install go-task
 | `task build` | `go build -o server ./cmd/api` |
 | `task run` | `go run ./cmd/api` |
 | `task test` | `go test -v ./...` |
-| `task docker-build` | `docker build --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t olmigar/stock-ticker:latest .` |
-| `task docker-push` | `docker push olmigar/stock-ticker:latest` |
+| `task docker-build` | `docker build --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t olmigar/stock-ticker:v1 .` |
+| `task docker-push` | `docker push olmigar/stock-ticker:v1` |
 | `task k8s-apply` | `kubectl apply -f k8s/` |
 | `task k8s-delete` | `kubectl delete -f k8s/` |
 | `task port-forward` | `kubectl port-forward svc/stock-ticker 8080:80` |

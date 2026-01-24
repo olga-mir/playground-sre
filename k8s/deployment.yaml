@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: stock-ticker
-          image: olmigar/stock-ticker:latest
+          image: olmigar/stock-ticker:v1
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

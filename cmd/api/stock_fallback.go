@@ -12,7 +12,7 @@ func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	avResp, _, err := stock.Fetch(app.config.StaticFallbackURL)
+	avResp, _, err := app.stockService.Fetch(app.config.StaticFallbackURL)
 	if err != nil {
 		app.serverErrorResponse(w, r, http.StatusBadGateway, "fallback upstream error")
 		return
@@ -20,14 +20,14 @@ func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Requ
 
 	symbol := app.config.Symbol
 	if avResp.MetaData != nil {
-		if s, ok := avResp.MetaData["2. Symbol"]; ok {
+		if s, ok := avResp.MetaData[stock.FieldSymbol]; ok {
 			symbol = s
 		}
 	}
 
-	resp, failed := stock.Process(avResp, symbol, app.config.NDays)
-	if failed {
-		app.serverErrorResponse(w, r, http.StatusBadGateway, "fallback returned no data")
+	resp, err := app.stockService.Process(avResp, symbol, app.config.NDays)
+	if err != nil {
+		app.serverErrorResponse(w, r, http.StatusBadGateway, err.Error())
 		return
 	}
 

@@ -1,15 +1,16 @@
 package stock
 
 import (
+	"errors"
 	"math"
 	"testing"
 )
 
 func TestExtractClosingPrices(t *testing.T) {
 	timeSeries := map[string]map[string]string{
-		"2026-01-03": {"4. close": "150.00"},
-		"2026-01-02": {"4. close": "148.50"},
-		"2026-01-01": {"4. close": "147.00"},
+		"2026-01-03": {FieldClose: "150.00"},
+		"2026-01-02": {FieldClose: "148.50"},
+		"2026-01-01": {FieldClose: "147.00"},
 	}
 
 	prices := ExtractClosingPrices(timeSeries, 2)
@@ -29,8 +30,8 @@ func TestExtractClosingPrices(t *testing.T) {
 
 func TestExtractClosingPricesSkipsInvalid(t *testing.T) {
 	timeSeries := map[string]map[string]string{
-		"2026-01-02": {"4. close": "invalid"},
-		"2026-01-01": {"4. close": "100.00"},
+		"2026-01-02": {FieldClose: "invalid"},
+		"2026-01-01": {FieldClose: "100.00"},
 	}
 
 	prices := ExtractClosingPrices(timeSeries, 10)
@@ -63,18 +64,19 @@ func TestCalculateAverageEmpty(t *testing.T) {
 	}
 }
 
-func TestProcess(t *testing.T) {
+func TestServiceProcess(t *testing.T) {
+	svc := NewService()
 	avResp := &AlphaVantageResponse{
 		TimeSeries: map[string]map[string]string{
-			"2026-01-02": {"4. close": "150.00"},
-			"2026-01-01": {"4. close": "100.00"},
+			"2026-01-02": {FieldClose: "150.00"},
+			"2026-01-01": {FieldClose: "100.00"},
 		},
 	}
 
-	resp, failed := Process(avResp, "TEST", 7)
+	resp, err := svc.Process(avResp, "TEST", 7)
 
-	if failed {
-		t.Error("expected success, got failure")
+	if err != nil {
+		t.Errorf("expected success, got error: %v", err)
 	}
 
 	if resp.Symbol != "TEST" {
@@ -90,26 +92,68 @@ func TestProcess(t *testing.T) {
 	}
 }
 
-func TestProcessWithError(t *testing.T) {
+func TestServiceProcessWithError(t *testing.T) {
+	svc := NewService()
 	avResp := &AlphaVantageResponse{
 		Error: "Invalid API call",
 	}
 
-	_, failed := Process(avResp, "TEST", 7)
+	_, err := svc.Process(avResp, "TEST", 7)
 
-	if !failed {
-		t.Error("expected failure for error response")
+	if err == nil {
+		t.Error("expected error for invalid response")
+	}
+
+	if !errors.Is(err, ErrInvalidResponse) {
+		t.Errorf("expected ErrInvalidResponse, got %v", err)
 	}
 }
 
-func TestProcessWithNote(t *testing.T) {
+func TestServiceProcessWithNote(t *testing.T) {
+	svc := NewService()
 	avResp := &AlphaVantageResponse{
 		Note: "API call frequency exceeded",
 	}
 
-	_, failed := Process(avResp, "TEST", 7)
+	_, err := svc.Process(avResp, "TEST", 7)
 
-	if !failed {
-		t.Error("expected failure for rate limit note")
+	if err == nil {
+		t.Error("expected error for rate limit note")
+	}
+
+	if !errors.Is(err, ErrRateLimited) {
+		t.Errorf("expected ErrRateLimited, got %v", err)
+	}
+}
+
+func TestServiceProcessInvalidNDays(t *testing.T) {
+	svc := NewService()
+	avResp := &AlphaVantageResponse{
+		TimeSeries: map[string]map[string]string{
+			"2026-01-01": {FieldClose: "100.00"},
+		},
+	}
+
+	_, err := svc.Process(avResp, "TEST", 0)
+	if !errors.Is(err, ErrInvalidNDays) {
+		t.Errorf("expected ErrInvalidNDays for 0, got %v", err)
+	}
+
+	_, err = svc.Process(avResp, "TEST", 400)
+	if !errors.Is(err, ErrInvalidNDays) {
+		t.Errorf("expected ErrInvalidNDays for 400, got %v", err)
+	}
+}
+
+func TestServiceProcessNoData(t *testing.T) {
+	svc := NewService()
+	avResp := &AlphaVantageResponse{
+		TimeSeries: map[string]map[string]string{},
+	}
+
+	_, err := svc.Process(avResp, "TEST", 7)
+
+	if !errors.Is(err, ErrNoData) {
+		t.Errorf("expected ErrNoData, got %v", err)
 	}
 }

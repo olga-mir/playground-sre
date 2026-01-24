@@ -12,12 +12,14 @@ import (
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
 	"playground-sre/internal/config"
+	"playground-sre/internal/stock"
 )
 
 var gitSHA = "unknown"
 
 type application struct {
-	config *config.Config
+	config       *config.Config
+	stockService *stock.Service
 }
 
 func main() {
@@ -37,7 +39,8 @@ func main() {
 	}
 
 	app := &application{
-		config: cfg,
+		config:       cfg,
+		stockService: stock.NewService(),
 	}
 
 	router := chi.NewRouter()
