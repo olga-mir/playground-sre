@@ -1,0 +1,27 @@
+version: '3'
+
+vars:
+  IMAGE_NAME: stock-ticker
+  TAG: '{{.TAG | default "latest"}}'
+  LOCAL_PORT: 8080
+
+tasks:
+  extra:k8s-apply-extra:
+    desc: Apply extra ConfigMap
+    cmds:
+      - kubectl apply -f k8s/configmap-extra.yaml
+
+  extra:curl-fallback:
+    desc: Curl the fallback endpoint
+    cmds:
+      - curl -s http://localhost:{{.LOCAL_PORT}}/v1/stock-fallback
+
+  extra:run-with-fallback:
+    desc: Run locally with fallback URL configured
+    cmds:
+      - STATIC_FALLBACK_URL=https://head-in-the-cloudz.com/experiments/73/static-fallback go run ./cmd/api
+
+  extra:run-with-profiler:
+    desc: Run locally with Cloud Profiler enabled (requires GCP_PROJECT_ID)
+    cmds:
+      - ENABLE_CLOUDPROFILER=true go run ./cmd/api
