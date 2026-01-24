@@ -2,6 +2,8 @@
 
 FROM golang:1.25-bookworm AS builder
 
+ARG GIT_SHA=unknown
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -9,7 +11,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.gitSHA=${GIT_SHA}" -o server ./cmd/api
 
 FROM gcr.io/distroless/base-debian12
 

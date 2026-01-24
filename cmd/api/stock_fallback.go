@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
-	"time"
+
+	"playground-sre/internal/stock"
 )
 
 func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Request) {
@@ -13,33 +12,11 @@ func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(app.config.StaticFallbackURL)
+	avResp, _, err := stock.Fetch(app.config.StaticFallbackURL)
 	if err != nil {
 		app.serverErrorResponse(w, r, http.StatusBadGateway, "fallback upstream error")
 		return
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		app.serverErrorResponse(w, r, http.StatusInternalServerError, "failed to read fallback response")
-		return
-	}
-
-	var avResp alphaVantageResponse
-	if err := json.Unmarshal(body, &avResp); err != nil {
-		app.serverErrorResponse(w, r, http.StatusBadGateway, "failed to parse fallback response")
-		return
-	}
-
-	if len(avResp.TimeSeries) == 0 {
-		app.serverErrorResponse(w, r, http.StatusBadGateway, "fallback returned no data")
-		return
-	}
-
-	prices := app.extractClosingPrices(avResp.TimeSeries, app.config.NDays)
-	avg := calculateAverage(prices)
 
 	symbol := app.config.Symbol
 	if avResp.MetaData != nil {
@@ -48,14 +25,13 @@ func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	response := stockResponse{
-		Symbol:        symbol,
-		NDays:         len(prices),
-		ClosingPrices: prices,
-		Average:       avg,
+	resp, failed := stock.Process(avResp, symbol, app.config.NDays)
+	if failed {
+		app.serverErrorResponse(w, r, http.StatusBadGateway, "fallback returned no data")
+		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"data": response, "source": "fallback"}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"data": resp, "source": "fallback"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, http.StatusInternalServerError, err.Error())
 	}

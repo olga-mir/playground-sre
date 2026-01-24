@@ -14,6 +14,8 @@ import (
 	"playground-sre/internal/config"
 )
 
+var gitSHA = "unknown"
+
 type application struct {
 	config *config.Config
 }

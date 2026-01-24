@@ -6,7 +6,8 @@ import (
 
 func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	response := envelope{
-		"status": "healthy",
+		"status":  "healthy",
+		"version": gitSHA,
 	}
 
 	err := app.writeJSON(w, http.StatusOK, response, nil)
