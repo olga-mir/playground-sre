@@ -1,8 +1,8 @@
 # Stock Ticker API
 
-[![Go](https://github.com/olmigar/playground-sre/actions/workflows/go.yml/badge.svg)](https://github.com/olmigar/playground-sre/actions/workflows/go.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/olmigar/playground-sre)](https://goreportcard.com/report/github.com/olmigar/playground-sre)
-[![codecov](https://codecov.io/gh/olmigar/playground-sre/branch/main/graph/badge.svg)](https://codecov.io/gh/olmigar/playground-sre)
+[![Go](https://github.com/olga-mir/playground-sre/actions/workflows/go.yml/badge.svg)](https://github.com/olga-mir/playground-sre/actions/workflows/go.yml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/olga-mir/playground-sre)](https://goreportcard.com/report/github.com/olga-mir/playground-sre)
+[![codecov](https://codecov.io/gh/olga-mir/playground-sre/branch/main/graph/badge.svg)](https://codecov.io/gh/olga-mir/playground-sre)
 
 A RESTful web service that returns closing stock prices from AlphaVantage.
 
