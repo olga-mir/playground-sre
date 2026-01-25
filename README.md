@@ -12,14 +12,19 @@ When running locally following environment variables are expected by the program
 
 ## Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| SYMBOL | Stock symbol to query | MSFT |
-| NDAYS | Number of days to return | 7 |
-| APIKEY | AlphaVantage API key | (required) |
-| SERVER_ADDRESS | Listen address | :8080 |
-
 Obtain your key following instructions [here](https://www.alphavantage.co/support/#api-key)
+
+For best experience store env variables in a file and source them before running. All settings are optional.
+
+Note that if API Key is not provided, the main endpoint will return 502, but you can still use fallback mechanisms to interact with this app.
+
+```bash
+export APIKEY=<YOUR KEY>
+export NDAYS=<NUMBER-OF-DAYS>
+export SYMBOL=<TICKER>
+
+# refer to "extras" section for extra config
+```
 
 ## Run Locally
 
@@ -53,6 +58,10 @@ If you are on Mac install with `brew`:
 brew install go-task
 ```
 
+Task is not required to work with this project, equivalents are provided below.
+Note that you need to source env variables or provide them in-line, refer to config section at the top of this README.
+Also note that docker-push will not work OOTB because my registry is hardcoded in the variable in Taskfile.
+
 <details>
 <summary>Bash equivalents (no Taskfile required)</summary>
 
@@ -71,13 +80,17 @@ brew install go-task
 
 ## Endpoints
 
+For more details please refer to [./demo/design-decisions.md](./demo/design-decisions.md)
 
-- `GET /v1/stock` - Returns last NDAYS closing prices and average for SYMBOL
+- `GET /v1/stock` - Returns last NDAYS closing prices and average for SYMBOL - this relies on premium endpoint, so alternatives are provided:
 
-Additional Endpoints:
+- `GET /v1/stock-fallback` - Uses static fallback data source (extra)
+- `GET /v1/stock?type=demo` - Uses `demo` API Key as documented https://www.alphavantage.co/documentation/
+- `GET /v1/stock?type=free` - Uses `TIME_SERIES_DAILY` which is free.
+
+System Endpoints:
 
 - `GET /v1/health` - Health check
-- `GET /v1/stock-fallback` - Uses static fallback data source (extra)
 
 ## Extras
 

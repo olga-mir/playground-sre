@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+// healthHandler is the handler for the /v1/health endpoint.
+// It returns a JSON response with the status of the service and the current version.
 func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	response := envelope{
 		"status":  "healthy",

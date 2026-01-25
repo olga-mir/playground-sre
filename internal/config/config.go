@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the application.
 package config
 
 import (
@@ -6,21 +7,33 @@ import (
 	"time"
 )
 
+// Config holds the configuration for the application.
 type Config struct {
+	// ServerAddress is the address the HTTP server listens on.
 	ServerAddress string
-	ReadTimeout   time.Duration
-	WriteTimeout  time.Duration
-	IdleTimeout   time.Duration
-	Symbol        string
-	NDays         int
-	APIKey        string
+	// ReadTimeout is the maximum duration for reading the entire request, including the body.
+	ReadTimeout time.Duration
+	// WriteTimeout is the maximum duration before timing out writes of the response.
+	WriteTimeout time.Duration
+	// IdleTimeout is the maximum amount of time to wait for the next request when keep-alives are enabled.
+	IdleTimeout time.Duration
+	// Symbol is the default stock symbol to query.
+	Symbol string
+	// NDays is the default number of days of stock data to return.
+	NDays int
+	// APIKey is the key for accessing the AlphaVantage API.
+	APIKey string
 
 	// Extra (optional)
-	StaticFallbackURL  string
-	GCPProjectID       string
+	// StaticFallbackURL is the URL for the static fallback data source.
+	StaticFallbackURL string
+	// GCPProjectID is the Google Cloud project ID for Cloud Profiler.
+	GCPProjectID string
+	// EnableCloudProfiler enables the Google Cloud Profiler.
 	EnableCloudProfiler bool
 }
 
+// Load reads configuration from environment variables and returns a Config struct.
 func Load() *Config {
 	addr := os.Getenv("SERVER_ADDRESS")
 	if addr == "" {

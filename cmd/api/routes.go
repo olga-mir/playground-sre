@@ -7,6 +7,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// RegisterRoutes sets up the routing for the application.
+// It defines the HTTP routes and associates them with their respective handlers.
+// It also sets up middleware for logging, recovery, and rate limiting.
 func (app *application) RegisterRoutes(router chi.Router) {
 	router.NotFound(app.notFoundResponse)
 

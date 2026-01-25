@@ -6,6 +6,9 @@ import (
 	"playground-sre/internal/stock"
 )
 
+// stockFallbackHandler is the handler for the /v1/stock-fallback endpoint.
+// It fetches stock data from a static, predefined URL, processes it, and returns it as a JSON response.
+// This handler is intended to be used as a fallback when the primary stock endpoint fails.
 func (app *application) stockFallbackHandler(w http.ResponseWriter, r *http.Request) {
 	if app.config.StaticFallbackURL == "" {
 		app.serverErrorResponse(w, r, http.StatusServiceUnavailable, "fallback endpoint not configured")

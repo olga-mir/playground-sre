@@ -1,3 +1,4 @@
+// Package stock provides services for fetching and processing stock data.
 package stock
 
 import (
@@ -13,21 +14,32 @@ import (
 )
 
 const (
-	FieldClose        = "4. close"
-	FieldSymbol       = "2. Symbol"
-	DefaultTimeout    = 10 * time.Second
-	MaxNDays          = 365
-	MinNDays          = 1
+	// FieldClose is the key for the closing price in the AlphaVantage time series data.
+	FieldClose = "4. close"
+	// FieldSymbol is the key for the stock symbol in the AlphaVantage metadata.
+	FieldSymbol = "2. Symbol"
+	// DefaultTimeout is the default timeout for HTTP requests.
+	DefaultTimeout = 10 * time.Second
+	// MaxNDays is the maximum number of days that can be requested.
+	MaxNDays = 365
+	// MinNDays is the minimum number of days that can be requested.
+	MinNDays = 1
 )
 
 var (
-	ErrUpstreamError    = errors.New("upstream error")
-	ErrRateLimited      = errors.New("API rate limit exceeded")
-	ErrInvalidResponse  = errors.New("invalid API response")
-	ErrNoData           = errors.New("no price data available")
-	ErrInvalidNDays     = errors.New("ndays must be between 1 and 365")
+	// ErrUpstreamError indicates an error from the upstream API.
+	ErrUpstreamError = errors.New("upstream error")
+	// ErrRateLimited indicates that the API rate limit has been exceeded.
+	ErrRateLimited = errors.New("API rate limit exceeded")
+	// ErrInvalidResponse indicates an invalid or unparseable response from the API.
+	ErrInvalidResponse = errors.New("invalid API response")
+	// ErrNoData indicates that no price data is available for the requested symbol or date range.
+	ErrNoData = errors.New("no price data available")
+	// ErrInvalidNDays indicates that the requested number of days is outside the valid range.
+	ErrInvalidNDays = errors.New("ndays must be between 1 and 365")
 )
 
+// AlphaVantageResponse represents the structure of the response from the AlphaVantage API.
 type AlphaVantageResponse struct {
 	MetaData   map[string]string            `json:"Meta Data"`
 	TimeSeries map[string]map[string]string `json:"Time Series (Daily)"`
@@ -35,6 +47,7 @@ type AlphaVantageResponse struct {
 	Error      string                       `json:"Error Message,omitempty"`
 }
 
+// Response represents the structure of the response provided by this service.
 type Response struct {
 	Symbol        string       `json:"symbol"`
 	NDays         int          `json:"ndays"`
@@ -42,21 +55,26 @@ type Response struct {
 	Average       float64      `json:"average"`
 }
 
+// PriceEntry represents a single day's closing price.
 type PriceEntry struct {
 	Date  string  `json:"date"`
 	Close float64 `json:"close"`
 }
 
+// Service provides methods for fetching and processing stock data.
 type Service struct {
 	client *http.Client
 }
 
+// NewService creates and returns a new stock Service.
 func NewService() *Service {
 	return &Service{
 		client: &http.Client{Timeout: DefaultTimeout},
 	}
 }
 
+// Fetch retrieves data from the given URL and attempts to unmarshal it into an AlphaVantageResponse.
+// It returns the parsed response, the raw response body, and any error that occurred.
 func (s *Service) Fetch(url string) (*AlphaVantageResponse, []byte, error) {
 	resp, err := s.client.Get(url)
 	if err != nil {
@@ -77,6 +95,8 @@ func (s *Service) Fetch(url string) (*AlphaVantageResponse, []byte, error) {
 	return &avResp, body, nil
 }
 
+// Process validates the AlphaVantageResponse, extracts the closing prices, and calculates the average.
+// It returns a formatted Response object or an error if processing fails.
 func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int) (*Response, error) {
 	if ndays < MinNDays || ndays > MaxNDays {
 		return nil, ErrInvalidNDays
@@ -107,6 +127,8 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 	}, nil
 }
 
+// ExtractClosingPrices extracts the most recent N days of closing prices from the time series data.
+// It sorts the data by date in descending order and returns a slice of PriceEntry.
 func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
 	dates := make([]string, 0, len(timeSeries))
 	for date := range timeSeries {
@@ -131,6 +153,7 @@ func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []
 	return prices
 }
 
+// CalculateAverage calculates the average of the closing prices.
 func CalculateAverage(prices []PriceEntry) float64 {
 	if len(prices) == 0 {
 		return 0

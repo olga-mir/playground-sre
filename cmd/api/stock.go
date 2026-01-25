@@ -10,19 +10,28 @@ import (
 )
 
 const (
+	// EndpointPremium is the type for the premium AlphaVantage endpoint.
 	EndpointPremium = "premium"
-	EndpointFree    = "free"
-	EndpointDemo    = "demo"
-	DemoAPIKey      = "demo"
-	DemoSymbol      = "IBM"
+	// EndpointFree is the type for the free AlphaVantage endpoint.
+	EndpointFree = "free"
+	// EndpointDemo is the type for the demo AlphaVantage endpoint.
+	EndpointDemo = "demo"
+	// DemoAPIKey is the API key for the demo endpoint.
+	DemoAPIKey = "demo"
+	// DemoSymbol is the stock symbol for the demo endpoint.
+	DemoSymbol = "IBM"
 )
 
+// stockHandler is the handler for the /v1/stock endpoint.
+// It fetches stock data from the AlphaVantage API, processes it, and returns it as a JSON response.
+// It supports different endpoint types (premium, free, demo) via the "type" query parameter.
 func (app *application) stockHandler(w http.ResponseWriter, r *http.Request) {
 	endpointType := r.URL.Query().Get("type")
 	if endpointType == "" {
 		endpointType = EndpointPremium
 	}
 
+	// refer to official documentation: https://www.alphavantage.co/documentation/
 	url, symbol := app.buildStockURL(endpointType)
 	if url == "" {
 		app.serverErrorResponse(w, r, http.StatusBadRequest, "invalid endpoint type: use premium, free, or demo")
@@ -56,7 +65,14 @@ func (app *application) stockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// buildStockURL constructs the AlphaVantage API URL based on the endpoint type.
+// It returns the URL and the stock symbol to be used.
 func (app *application) buildStockURL(endpointType string) (url, symbol string) {
+	// Symbol can have different formats, e.g.:
+	// -- US stocks: `MSFT`, `AAPL`
+	// -- London Stock Exchange: `TSCO.LON`
+	// -- Toronto Stock Exchange: `SHOP.TRT`
+	// -- Shanghai Stock Exchange: `600104.SHH`
 	symbol = app.config.Symbol
 
 	switch endpointType {
@@ -82,6 +98,8 @@ func (app *application) buildStockURL(endpointType string) (url, symbol string) 
 	return url, symbol
 }
 
+// upstreamFailureResponse sends a JSON response for failures from the upstream API.
+// It includes the original error, the raw payload from the upstream, and hints for fallback options.
 func (app *application) upstreamFailureResponse(w http.ResponseWriter, r *http.Request, originalPayload []byte, err error, endpointType string) {
 	var original interface{}
 	json.Unmarshal(originalPayload, &original)
