@@ -1,14 +1,10 @@
-# Stock Ticker API
-
 [![Go](https://github.com/olga-mir/playground-sre/actions/workflows/go.yml/badge.svg)](https://github.com/olga-mir/playground-sre/actions/workflows/go.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/olga-mir/playground-sre)](https://goreportcard.com/report/github.com/olga-mir/playground-sre)
 [![codecov](https://codecov.io/gh/olga-mir/playground-sre/branch/main/graph/badge.svg)](https://codecov.io/gh/olga-mir/playground-sre)
 
+# Stock Ticker API
+
 A RESTful web service that returns closing stock prices from AlphaVantage.
-
-# Quick Start
-
-When running locally following environment variables are expected by the program:
 
 ## Configuration
 
@@ -26,17 +22,11 @@ export SYMBOL=<TICKER>
 # refer to "extras" section for extra config
 ```
 
-## Run Locally
-
-```bash
-go run ./cmd/api
-
-# Test
-curl http://localhost:8080/v1/stock
-```
-
-
 ## Kubernetes Deployment
+
+Cluster provisioning is outside of scope of this project. All tools work with kubectl current context.
+
+You can also run this app locally, instructions for running locally available below.
 
 ```bash
 # Create secret (APIKEY from your env)
@@ -49,6 +39,13 @@ kubectl port-forward svc/stock-ticker 8080:80
 # Test (same as local)
 curl http://localhost:8080/v1/stock
 ```
+
+## Design Decisions and Extra Features
+
+This project includes a `demo` directory that contains documentation and walkthroughs for various features, showcasing extra-mile efforts in observability and resilience.
+
+For detailed information on design decisions, architecture, and feature demonstrations, please see the [demo README](./demo/README.md).
+
 
 ## Taskfile
 
@@ -79,15 +76,22 @@ Also note that docker-push will not work OOTB because my registry is hardcoded i
 
 </details>
 
-## Demos and Design Decisions
+## Run Locally
 
-This project includes a `demo` directory that contains documentation and walkthroughs for various features, showcasing extra-mile efforts in observability and resilience.
+```bash
+go run ./cmd/api
 
-For detailed information on design decisions, architecture, and feature demonstrations, please see the [demo README](./demo/README.md).
+# Test
+curl http://localhost:8080/v1/stock
+```
 
 ## Endpoints
 
+Main Endpoint:
+
 - `GET /v1/stock` - Returns last NDAYS closing prices and average for SYMBOL - this relies on premium endpoint, so alternatives are provided:
+
+Additional Endpoints:
 
 - `GET /v1/stock-fallback` - Uses static fallback data source (extra)
 - `GET /v1/stock?type=demo` - Uses `demo` API Key as documented https://www.alphavantage.co/documentation/
