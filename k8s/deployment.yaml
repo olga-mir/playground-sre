@@ -52,13 +52,12 @@ spec:
               cpu: 100m
               memory: 64Mi
             limits:
-              cpu: 500m
               memory: 128Mi
           livenessProbe:
             httpGet:
               path: /v1/health
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 1
             periodSeconds: 10
           readinessProbe:
             httpGet:
