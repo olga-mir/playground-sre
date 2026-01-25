@@ -30,8 +30,6 @@ export SYMBOL=<TICKER>
 
 ```bash
 go run ./cmd/api
-# OR pass env vars explicitely
-APIKEY=<YOUKEY> NDAYS=5 SYMBOL=MSFT go run ./cmd/api
 
 # Test
 curl http://localhost:8080/v1/stock
@@ -47,6 +45,9 @@ kubectl create secret generic stock-ticker-secret --from-literal=APIKEY=$APIKEY
 # Deploy
 kubectl apply -f k8s/
 kubectl port-forward svc/stock-ticker 8080:80
+
+# Test (same as local)
+curl http://localhost:8080/v1/stock
 ```
 
 ## Taskfile
@@ -78,9 +79,13 @@ Also note that docker-push will not work OOTB because my registry is hardcoded i
 
 </details>
 
-## Endpoints
+## Demos and Design Decisions
 
-For more details please refer to [./demo/design-decisions.md](./demo/design-decisions.md)
+This project includes a `demo` directory that contains documentation and walkthroughs for various features, showcasing extra-mile efforts in observability and resilience.
+
+For detailed information on design decisions, architecture, and feature demonstrations, please see the [demo README](./demo/README.md).
+
+## Endpoints
 
 - `GET /v1/stock` - Returns last NDAYS closing prices and average for SYMBOL - this relies on premium endpoint, so alternatives are provided:
 

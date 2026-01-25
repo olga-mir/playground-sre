@@ -50,6 +50,7 @@ tasks:
   k8s-apply:
     desc: Apply Kubernetes manifests
     cmds:
+      - kubectl get secret stock-ticker-secret &>/dev/null || kubectl create secret generic stock-ticker-secret --from-literal=APIKEY=$APIKEY
       - kubectl apply -f k8s/
 
   port-forward:

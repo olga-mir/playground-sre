@@ -1,4 +1,5 @@
 // Package middleware provides HTTP middleware functions.
+// Prefer using Chi built-in middlewares first
 package middleware
 
 import (
@@ -7,11 +8,9 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Middleware defines a function that takes an http.Handler and returns an http.Handler.
 type Middleware func(http.Handler) http.Handler
 
 // RateLimiter returns a middleware that limits the number of requests per second.
-// It uses a token bucket rate limiter from the golang.org/x/time/rate package.
 // If the limit is exceeded, the onLimit function is called.
 func RateLimiter(rps float64, burst int, onLimit func(http.ResponseWriter, *http.Request)) func(http.Handler) http.Handler {
 	limiter := rate.NewLimiter(rate.Limit(rps), burst)

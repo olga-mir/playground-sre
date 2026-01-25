@@ -16,26 +16,25 @@ import (
 const (
 	// FieldClose is the key for the closing price in the AlphaVantage time series data.
 	FieldClose = "4. close"
+
 	// FieldSymbol is the key for the stock symbol in the AlphaVantage metadata.
 	FieldSymbol = "2. Symbol"
+
 	// DefaultTimeout is the default timeout for HTTP requests.
 	DefaultTimeout = 10 * time.Second
+
 	// MaxNDays is the maximum number of days that can be requested.
 	MaxNDays = 365
+
 	// MinNDays is the minimum number of days that can be requested.
 	MinNDays = 1
 )
 
 var (
-	// ErrUpstreamError indicates an error from the upstream API.
 	ErrUpstreamError = errors.New("upstream error")
-	// ErrRateLimited indicates that the API rate limit has been exceeded.
 	ErrRateLimited = errors.New("API rate limit exceeded")
-	// ErrInvalidResponse indicates an invalid or unparseable response from the API.
 	ErrInvalidResponse = errors.New("invalid API response")
-	// ErrNoData indicates that no price data is available for the requested symbol or date range.
 	ErrNoData = errors.New("no price data available")
-	// ErrInvalidNDays indicates that the requested number of days is outside the valid range.
 	ErrInvalidNDays = errors.New("ndays must be between 1 and 365")
 )
 
@@ -114,7 +113,7 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		return nil, ErrNoData
 	}
 
-	prices := ExtractClosingPrices(avResp.TimeSeries, ndays)
+	prices := extractClosingPrices(avResp.TimeSeries, ndays)
 	if len(prices) == 0 {
 		return nil, ErrNoData
 	}
@@ -123,13 +122,13 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		Symbol:        symbol,
 		NDays:         len(prices),
 		ClosingPrices: prices,
-		Average:       CalculateAverage(prices),
+		Average:       calculateAverage(prices),
 	}, nil
 }
 
-// ExtractClosingPrices extracts the most recent N days of closing prices from the time series data.
+// extractClosingPrices extracts the most recent N days of closing prices from the time series data.
 // It sorts the data by date in descending order and returns a slice of PriceEntry.
-func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
+func extractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
 	dates := make([]string, 0, len(timeSeries))
 	for date := range timeSeries {
 		dates = append(dates, date)
@@ -153,8 +152,8 @@ func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []
 	return prices
 }
 
-// CalculateAverage calculates the average of the closing prices.
-func CalculateAverage(prices []PriceEntry) float64 {
+// calculateAverage calculates the average of the closing prices.
+func calculateAverage(prices []PriceEntry) float64 {
 	if len(prices) == 0 {
 		return 0
 	}

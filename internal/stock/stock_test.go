@@ -13,7 +13,7 @@ func TestExtractClosingPrices(t *testing.T) {
 		"2026-01-01": {FieldClose: "147.00"},
 	}
 
-	prices := ExtractClosingPrices(timeSeries, 2)
+	prices := extractClosingPrices(timeSeries, 2)
 
 	if len(prices) != 2 {
 		t.Errorf("expected 2 prices, got %d", len(prices))
@@ -34,7 +34,7 @@ func TestExtractClosingPricesSkipsInvalid(t *testing.T) {
 		"2026-01-01": {FieldClose: "100.00"},
 	}
 
-	prices := ExtractClosingPrices(timeSeries, 10)
+	prices := extractClosingPrices(timeSeries, 10)
 
 	if len(prices) != 1 {
 		t.Errorf("expected 1 valid price, got %d", len(prices))
@@ -48,7 +48,7 @@ func TestCalculateAverage(t *testing.T) {
 		{Date: "2026-01-01", Close: 300.00},
 	}
 
-	avg := CalculateAverage(prices)
+	avg := calculateAverage(prices)
 
 	if math.Abs(avg-200.00) > 0.001 {
 		t.Errorf("expected average 200.00, got %f", avg)
@@ -57,7 +57,7 @@ func TestCalculateAverage(t *testing.T) {
 
 func TestCalculateAverageEmpty(t *testing.T) {
 	prices := []PriceEntry{}
-	avg := CalculateAverage(prices)
+	avg := calculateAverage(prices)
 
 	if avg != 0 {
 		t.Errorf("expected 0 for empty slice, got %f", avg)
