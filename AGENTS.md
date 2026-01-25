@@ -11,7 +11,7 @@ A RESTful web server in Go that returns closing stock prices from AlphaVantage.
 | GET endpoint for stock prices | ✅ | `/v1/stock` returns NDAYS closing prices + average |
 | Environment variables | ✅ | SYMBOL, NDAYS, APIKEY via ConfigMap/Secret |
 | Docker image | ✅ | golang:1.25-bookworm → distroless |
-| K8s manifests | ✅ | Deployment, Service, Ingress, ConfigMap |
+| K8s manifests | ✅ | Deployment, Service, PodDisruptionBudget, ConfigMap. Ingress not included as vanilla cluster infra is assumed. |
 | Error handling with fallback hint | ✅ | Relays upstream payload + suggests `/v1/stock-fallback` |
 | Health endpoint | ✅ | `/v1/health` with git SHA version |
 
@@ -45,7 +45,7 @@ A RESTful web server in Go that returns closing stock prices from AlphaVantage.
 ├── k8s/
 │   ├── deployment.yaml
 │   ├── service.yaml
-│   ├── ingress.yaml
+│   ├── pdb.yaml
 │   ├── configmap.yaml
 │   └── configmap-extra.yaml
 ├── Dockerfile
@@ -100,6 +100,7 @@ kubectl apply -f k8s/
 4. **Distroless image** - Minimal attack surface, required for Cloud Profiler
 5. **Business logic separation** - `internal/stock/` package with testable functions
 6. **Optional extras** - ConfigMap with `optional: true`, code handles empty values
+7. **High-Availability Kubernetes Configuration** - The deployment is configured for high availability using a `PodDisruptionBudget` to prevent simultaneous pod termination, `podAntiAffinity` to spread pods across nodes, and a fine-tuned `rollingUpdate` strategy for zero-downtime deployments.
 
 ## Future Considerations
 

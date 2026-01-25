@@ -1,3 +1,4 @@
+// The main package for the stock ticker API application.
 package main
 
 import (
@@ -12,14 +13,21 @@ import (
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
 	"playground-sre/internal/config"
+	"playground-sre/internal/stock"
 )
 
+// gitSHA is the git commit hash of the running application.
+// It is set at build time.
 var gitSHA = "unknown"
 
+// application holds the dependencies for the HTTP handlers, middleware, and helpers.
 type application struct {
-	config *config.Config
+	config       *config.Config
+	stockService *stock.Service
 }
 
+// main is the entry point for the application.
+// It initializes the configuration, sets up the server, and handles graceful shutdown.
 func main() {
 	cfg := config.Load()
 
@@ -37,7 +45,8 @@ func main() {
 	}
 
 	app := &application{
-		config: cfg,
+		config:       cfg,
+		stockService: stock.NewService(),
 	}
 
 	router := chi.NewRouter()
