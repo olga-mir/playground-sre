@@ -6,6 +6,11 @@ metadata:
     app: stock-ticker
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: stock-ticker
@@ -14,6 +19,19 @@ spec:
       labels:
         app: stock-ticker
     spec:
+      terminationGracePeriodSeconds: 15
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - stock-ticker
+              topologyKey: "kubernetes.io/hostname"
       containers:
         - name: stock-ticker
           image: olmigar/stock-ticker:v1
