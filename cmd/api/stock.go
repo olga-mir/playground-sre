@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"playground-sre/internal/stock"
+	"github.com/olga-mir/playground-sre/internal/stock"
 )
 
 const (

@@ -1,7 +1,7 @@
 package main
 
 import (
-	cm "playground-sre/internal/middleware"
+	cm "github.com/olga-mir/playground-sre/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -16,25 +17,26 @@ import (
 const (
 	// FieldClose is the key for the closing price in the AlphaVantage time series data.
 	FieldClose = "4. close"
-
 	// FieldSymbol is the key for the stock symbol in the AlphaVantage metadata.
 	FieldSymbol = "2. Symbol"
-
 	// DefaultTimeout is the default timeout for HTTP requests.
 	DefaultTimeout = 10 * time.Second
-
 	// MaxNDays is the maximum number of days that can be requested.
 	MaxNDays = 365
-
 	// MinNDays is the minimum number of days that can be requested.
 	MinNDays = 1
 )
 
 var (
+	// ErrUpstreamError indicates an error from the upstream API.
 	ErrUpstreamError = errors.New("upstream error")
+	// ErrRateLimited indicates that the API rate limit has been exceeded.
 	ErrRateLimited = errors.New("API rate limit exceeded")
+	// ErrInvalidResponse indicates an invalid or unparseable response from the API.
 	ErrInvalidResponse = errors.New("invalid API response")
+	// ErrNoData indicates that no price data is available for the requested symbol or date range.
 	ErrNoData = errors.New("no price data available")
+	// ErrInvalidNDays indicates that the requested number of days is outside the valid range.
 	ErrInvalidNDays = errors.New("ndays must be between 1 and 365")
 )
 
@@ -74,8 +76,16 @@ func NewService() *Service {
 
 // Fetch retrieves data from the given URL and attempts to unmarshal it into an AlphaVantageResponse.
 // It returns the parsed response, the raw response body, and any error that occurred.
-func (s *Service) Fetch(url string) (*AlphaVantageResponse, []byte, error) {
-	resp, err := s.client.Get(url)
+func (s *Service) Fetch(rawURL string) (*AlphaVantageResponse, []byte, error) {
+	// Redact API key from URL for logging
+	logURL, err := redactAPIKey(rawURL)
+	if err != nil {
+		log.Printf("warning: failed to parse URL for logging: %v", err)
+		logURL = "malformed-url"
+	}
+	log.Printf("info: calling upstream endpoint: %s", logURL)
+
+	resp, err := s.client.Get(rawURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %v", ErrUpstreamError, err)
 	}
@@ -113,7 +123,7 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		return nil, ErrNoData
 	}
 
-	prices := extractClosingPrices(avResp.TimeSeries, ndays)
+	prices := ExtractClosingPrices(avResp.TimeSeries, ndays)
 	if len(prices) == 0 {
 		return nil, ErrNoData
 	}
@@ -122,13 +132,13 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		Symbol:        symbol,
 		NDays:         len(prices),
 		ClosingPrices: prices,
-		Average:       calculateAverage(prices),
+		Average:       CalculateAverage(prices),
 	}, nil
 }
 
-// extractClosingPrices extracts the most recent N days of closing prices from the time series data.
+// ExtractClosingPrices extracts the most recent N days of closing prices from the time series data.
 // It sorts the data by date in descending order and returns a slice of PriceEntry.
-func extractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
+func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
 	dates := make([]string, 0, len(timeSeries))
 	for date := range timeSeries {
 		dates = append(dates, date)
@@ -152,8 +162,8 @@ func extractClosingPrices(timeSeries map[string]map[string]string, ndays int) []
 	return prices
 }
 
-// calculateAverage calculates the average of the closing prices.
-func calculateAverage(prices []PriceEntry) float64 {
+// CalculateAverage calculates the average of the closing prices.
+func CalculateAverage(prices []PriceEntry) float64 {
 	if len(prices) == 0 {
 		return 0
 	}
@@ -162,4 +172,18 @@ func calculateAverage(prices []PriceEntry) float64 {
 		sum += p.Close
 	}
 	return sum / float64(len(prices))
+}
+
+// redactAPIKey takes a raw URL string and returns a version with the "apikey" query parameter redacted.
+func redactAPIKey(rawURL string) (string, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	q := parsedURL.Query()
+	if q.Has("apikey") {
+		q.Set("apikey", "***REDACTED***")
+	}
+	parsedURL.RawQuery = q.Encode()
+	return parsedURL.String(), nil
 }

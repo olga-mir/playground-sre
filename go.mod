@@ -1,4 +1,4 @@
-module playground-sre
+module github.com/olga-mir/playground-sre
 
 go 1.25
 

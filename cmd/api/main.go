@@ -12,8 +12,8 @@ import (
 
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
-	"playground-sre/internal/config"
-	"playground-sre/internal/stock"
+	"github.com/olga-mir/playground-sre/internal/config"
+	"github.com/olga-mir/playground-sre/internal/stock"
 )
 
 // gitSHA is the git commit hash of the running application.

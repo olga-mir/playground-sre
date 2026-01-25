@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"playground-sre/internal/stock"
+	"github.com/olga-mir/playground-sre/internal/stock"
 )
 
 // stockFallbackHandler is the handler for the /v1/stock-fallback endpoint.
