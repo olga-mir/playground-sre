@@ -123,7 +123,7 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		return nil, ErrNoData
 	}
 
-	prices := ExtractClosingPrices(avResp.TimeSeries, ndays)
+	prices := extractClosingPrices(avResp.TimeSeries, ndays)
 	if len(prices) == 0 {
 		return nil, ErrNoData
 	}
@@ -132,13 +132,13 @@ func (s *Service) Process(avResp *AlphaVantageResponse, symbol string, ndays int
 		Symbol:        symbol,
 		NDays:         len(prices),
 		ClosingPrices: prices,
-		Average:       CalculateAverage(prices),
+		Average:       calculateAverage(prices),
 	}, nil
 }
 
-// ExtractClosingPrices extracts the most recent N days of closing prices from the time series data.
+// extractClosingPrices extracts the most recent N days of closing prices from the time series data.
 // It sorts the data by date in descending order and returns a slice of PriceEntry.
-func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
+func extractClosingPrices(timeSeries map[string]map[string]string, ndays int) []PriceEntry {
 	dates := make([]string, 0, len(timeSeries))
 	for date := range timeSeries {
 		dates = append(dates, date)
@@ -162,8 +162,8 @@ func ExtractClosingPrices(timeSeries map[string]map[string]string, ndays int) []
 	return prices
 }
 
-// CalculateAverage calculates the average of the closing prices.
-func CalculateAverage(prices []PriceEntry) float64 {
+// calculateAverage calculates the average of the closing prices.
+func calculateAverage(prices []PriceEntry) float64 {
 	if len(prices) == 0 {
 		return 0
 	}
