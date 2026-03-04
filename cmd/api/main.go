@@ -1,4 +1,3 @@
-// The main package for the stock ticker API application.
 package main
 
 import (
@@ -13,7 +12,6 @@ import (
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
 	"github.com/olga-mir/playground-sre/internal/config"
-	"github.com/olga-mir/playground-sre/internal/stock"
 )
 
 // gitSHA is the git commit hash of the running application.
@@ -22,18 +20,15 @@ var gitSHA = "unknown"
 
 // application holds the dependencies for the HTTP handlers, middleware, and helpers.
 type application struct {
-	config       *config.Config
-	stockService *stock.Service
+	config *config.Config
 }
 
-// main is the entry point for the application.
-// It initializes the configuration, sets up the server, and handles graceful shutdown.
 func main() {
 	cfg := config.Load()
 
 	if cfg.EnableCloudProfiler && cfg.GCPProjectID != "" {
 		profCfg := profiler.Config{
-			Service:        "stock-ticker",
+			Service:        "perf-lab",
 			ServiceVersion: "1.0.0",
 			ProjectID:      cfg.GCPProjectID,
 		}
@@ -45,8 +40,7 @@ func main() {
 	}
 
 	app := &application{
-		config:       cfg,
-		stockService: stock.NewService(),
+		config: cfg,
 	}
 
 	router := chi.NewRouter()
