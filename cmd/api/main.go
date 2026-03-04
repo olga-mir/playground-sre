@@ -12,20 +12,23 @@ import (
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
 	"github.com/olga-mir/playground-sre/internal/config"
+	"github.com/olga-mir/playground-sre/internal/telemetry"
 )
 
-// gitSHA is the git commit hash of the running application.
-// It is set at build time.
+// gitSHA is set at build time via -ldflags="-X main.gitSHA=<sha>".
 var gitSHA = "unknown"
 
-// application holds the dependencies for the HTTP handlers, middleware, and helpers.
+// application holds the dependencies for HTTP handlers and middleware.
 type application struct {
-	config *config.Config
+	config      *config.Config
+	tel         *telemetry.Telemetry
+	scenMetrics *scenarioMetrics
 }
 
 func main() {
 	cfg := config.Load()
 
+	// Optional: GCP Cloud Profiler (flame graphs in Cloud Console).
 	if cfg.EnableCloudProfiler && cfg.GCPProjectID != "" {
 		profCfg := profiler.Config{
 			Service:        "perf-lab",
@@ -39,8 +42,22 @@ func main() {
 		}
 	}
 
+	// Telemetry: OTEL metric SDK → Prometheus exporter → /metrics endpoint.
+	// Must be initialised before newScenarioMetrics() reads the global MeterProvider.
+	tel, err := telemetry.New()
+	if err != nil {
+		log.Fatalf("failed to initialize telemetry: %v", err)
+	}
+
+	sm, err := newScenarioMetrics()
+	if err != nil {
+		log.Fatalf("failed to initialize scenario metrics: %v", err)
+	}
+
 	app := &application{
-		config: cfg,
+		config:      cfg,
+		tel:         tel,
+		scenMetrics: sm,
 	}
 
 	router := chi.NewRouter()
@@ -71,7 +88,10 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+	if err := app.tel.Shutdown(ctx); err != nil {
+		log.Printf("Telemetry shutdown error: %v", err)
 	}
 
 	log.Println("Server exited")
