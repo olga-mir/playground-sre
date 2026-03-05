@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: stock-ticker-config-extra
-data:
-  STATIC_FALLBACK_URL: "https://head-in-the-cloudz.com/experiments/73/static-fallback"
-  ENABLE_CLOUDPROFILER: "false"

@@ -1,0 +1,35 @@
+# GKE Managed Prometheus - PodMonitoring CRD
+#
+# This tells the GKE Managed Prometheus collector to scrape /metrics on every
+# pod with app=perf-lab. No prometheus.io/scrape annotations are needed.
+#
+# Prerequisites:
+#   - GKE cluster with Managed Prometheus enabled (gke_gce_pd_csi_driver is not
+#     required, but --enable-managed-prometheus flag must be set on the node pool,
+#     or the Google Cloud Managed Service for Prometheus operator must be installed).
+#
+# Relationship to OpenTelemetry:
+#   - The /metrics endpoint is served by promhttp, backed by the OTEL Prometheus
+#     exporter.  Metrics are instrumented using the OTEL metric API (Counter,
+#     Histogram, UpDownCounter) but exposed in Prometheus text format.
+#   - GMP scrapes this endpoint exactly as it would scrape a native Prometheus
+#     client.  From GMP's perspective there is no difference.
+#   - To also export OTEL traces, deploy an OpenTelemetry Collector as a sidecar
+#     or DaemonSet and configure an OTLP trace exporter in main.go pointing at
+#     it.  The collector can forward to Cloud Trace.
+#
+# Verify with:
+#   kubectl get podmonitoring perf-lab -o yaml
+#   kubectl get prometheusrule              # if you add alerting rules later
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: perf-lab
+spec:
+  selector:
+    matchLabels:
+      app: perf-lab
+  endpoints:
+    - port: http
+      interval: 15s
+      path: /metrics

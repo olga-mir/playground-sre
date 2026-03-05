@@ -7,31 +7,41 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// RegisterRoutes sets up the routing for the application.
-// It defines the HTTP routes and associates them with their respective handlers.
-// It also sets up middleware for logging, recovery, and rate limiting.
+// RegisterRoutes configures the chi router with all endpoints and middleware.
 func (app *application) RegisterRoutes(router chi.Router) {
 	router.NotFound(app.notFoundResponse)
 
+	// Global middleware: panic recovery + OTEL HTTP metrics for every route.
 	router.Use(middleware.Recoverer)
+	router.Use(app.tel.Middleware)
 
-	// ** Router Groups **
-
-	// System endpoints
+	// --- Infrastructure endpoints (no access logging) ---
 	router.Get("/v1/health", app.healthHandler)
+	// Prometheus metrics endpoint – scraped by GKE Managed Prometheus via PodMonitoring.
+	router.Handle("/metrics", app.tel.Handler)
 
-	// User-facing APIs
+	// --- Scenario endpoints (with access logging + per-route rate limiting) ---
 	router.Group(func(r chi.Router) {
 		r.Use(middleware.Logger)
 
-		// This is the core endpoint specified in requirements
-		// It is meant to be called manually, hence aggressive ratelimiting
-		r.With(cm.RateLimiter(1, 1, app.rateLimitExceededResponse)).
-			Get("/v1/stock", app.stockHandler)
+		// Sleep: baseline, cheap to call repeatedly – moderate rate limit.
+		r.With(cm.RateLimiter(50, 10, app.rateLimitExceededResponse)).
+			Get("/v1/scenarios/sleep", app.sleepHandler)
 
-		// Fallback endpoint. It will call endpoint which returns static payload, with a few days old data.
-		// The upstream this endpoint is relying on is public, with no API key or ratelimiting
-		r.With(cm.RateLimiter(20, 5, app.rateLimitExceededResponse)).
-			Get("/v1/stock-fallback", app.stockFallbackHandler)
+		// CPU: deliberately expensive – conservative rate limit to avoid DoS.
+		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
+			Get("/v1/scenarios/cpu", app.cpuHandler)
+
+		// Upstream: makes outbound HTTP calls – moderate limit.
+		r.With(cm.RateLimiter(10, 3, app.rateLimitExceededResponse)).
+			Get("/v1/scenarios/upstream", app.upstreamHandler)
+
+		// Disk: allocates large temp files – conservative limit.
+		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
+			Get("/v1/scenarios/disk", app.diskHandler)
+
+		// Fanout: can spawn thousands of goroutines – conservative limit.
+		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
+			Get("/v1/scenarios/fanout", app.fanoutHandler)
 	})
 }

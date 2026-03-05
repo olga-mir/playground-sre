@@ -2,118 +2,119 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/olga-mir/playground-sre)](https://goreportcard.com/report/github.com/olga-mir/playground-sre)
 [![codecov](https://codecov.io/gh/olga-mir/playground-sre/branch/main/graph/badge.svg)](https://codecov.io/gh/olga-mir/playground-sre)
 
-# Stock Ticker API
+# perf-lab
 
-A RESTful web service that returns closing stock prices from AlphaVantage.
+A Go web server for exploring HTTP server performance under load when workloads exhibit different characteristics: CPU-bound work, blocking I/O, goroutine fan-out, upstream service calls, and more.
+
+Each scenario is a dedicated endpoint with tunable parameters. Hit it with a load generator (Fortio, `hey`, `wrk`) and watch the metrics.
+
+## Scenarios
+
+| Endpoint | What it exercises | Key parameters |
+|---|---|---|
+| `GET /v1/scenarios/cpu` | SHA-256 hash loop across N goroutines | `duration` (default `2s`), `goroutines` (default `1`) |
+| `GET /v1/scenarios/sleep` | Blocking wait — baseline overhead | `duration` (default `100ms`) |
+| `GET /v1/scenarios/upstream` | Concurrent HTTP fan-out | `n` (default `5`), `target` URL, `timeout` (default `5s`) |
+| `GET /v1/scenarios/disk` | Temp file write + read | `size` (default `1mb`), `sync` (default `false`) |
+| `GET /v1/scenarios/fanout` | Goroutine worker pool with CPU tasks | `workers` (default `10`), `task_duration` (default `100ms`) |
+| `GET /v1/health` | Health check (k8s probes) | — |
+| `GET /metrics` | Prometheus metrics (OTEL-instrumented) | — |
+
+### Example calls
+
+```bash
+# SHA-256 loop, 4 goroutines, 3 seconds
+curl 'http://localhost:8080/v1/scenarios/cpu?duration=3s&goroutines=4'
+
+# Sleep 500ms — baseline latency floor
+curl 'http://localhost:8080/v1/scenarios/sleep?duration=500ms'
+
+# Fan out 20 concurrent calls to itself
+curl 'http://localhost:8080/v1/scenarios/upstream?n=20'
+
+# Write and read a 10 MiB file, with fsync
+curl 'http://localhost:8080/v1/scenarios/disk?size=10mb&sync=true'
+
+# 100 goroutines, each running a 200ms CPU task
+curl 'http://localhost:8080/v1/scenarios/fanout?workers=100&task_duration=200ms'
+```
+
+## Observability
+
+Metrics are instrumented using the **OpenTelemetry metric API** and exported in **Prometheus text format** via the OTEL Prometheus exporter.
+
+```
+Application (OTEL Counter/Histogram/Gauge)
+    │
+    ▼
+OTEL MeterProvider  (go.opentelemetry.io/otel/sdk/metric)
+    │
+    ▼
+Prometheus Exporter  (go.opentelemetry.io/otel/exporters/prometheus)
+    │
+    ▼
+GET /metrics  ←── scraped by GKE Managed Prometheus (PodMonitoring CRD)
+```
+
+**Key metrics exposed:**
+
+| Metric | Type | Labels |
+|---|---|---|
+| `http_request_duration_seconds` | histogram | method, route |
+| `http_requests_total` | counter | method, route, status |
+| `http_requests_in_flight` | updowncounter | method, route |
+| `scenario_cpu_hashes_total` | counter | — |
+| `scenario_upstream_calls_total` | counter | status=ok\|error |
+| `scenario_disk_bytes_written_total` | counter | — |
+| `scenario_disk_bytes_read_total` | counter | — |
+| `scenario_fanout_hashes_total` | counter | — |
+
+### OTEL and Prometheus
+
+- **Prometheus** is a scrape-based data model and wire format. GKE Managed Prometheus runs at target environment.
+- **OpenTelemetry** is a vendor-neutral instrumentation API + SDK. Metrics written with OTEL API are emitted as Prometheus metrics and scraped by a prom collector (GKE managed prometheus in the initial stages of this project)
+- From GMP's perspective there is no difference — it just scrapes `/metrics`.
+- To also export **traces**, add an OTLP trace exporter in `main.go` pointing at the GKE OpenTelemetry Collector (or Cloud Trace directly). The instrumentation API stays the same.
+
+## Project Structure
+
+```
+.
+├── cmd/api/
+│   ├── main.go           # Entry point, telemetry init, graceful shutdown
+│   ├── routes.go         # Chi router, middleware, rate limits per scenario
+│   ├── scenarios.go      # HTTP handlers + OTEL metric instruments
+│   ├── health.go         # /v1/health
+│   ├── errors.go         # Standard JSON error responses
+│   └── helpers.go        # writeJSON helper
+├── internal/
+│   ├── config/           # Environment config
+│   ├── middleware/       # Rate limiter
+│   ├── telemetry/        # OTEL setup, Prometheus exporter, HTTP middleware
+│   └── scenarios/        # Workload implementations (pure computation, no HTTP)
+│       ├── cpu.go
+│       ├── sleep.go
+│       ├── upstream.go
+│       ├── disk.go
+│       └── fanout.go
+└── k8s/
+    ├──  ... # deployment will be hooked to `olga-mir/playground` clusters.
+```
+
+## Quick Start
+
+```bash
+# Run locally
+go run ./cmd/api
+
+# Build
+task build
+```
 
 ## Configuration
 
-Obtain your key following instructions [here](https://www.alphavantage.co/support/#api-key)
-
-For best experience store env variables in a file and source them before running. All settings are optional.
-
-Note that if API Key is not provided, the main endpoint will return 502, but you can still use fallback mechanisms to interact with this app.
-
-```bash
-export APIKEY=<YOUR KEY>
-export NDAYS=<NUMBER-OF-DAYS>
-export SYMBOL=<TICKER>
-
-# refer to "extras" section for extra config
-```
-
-## Kubernetes Deployment
-
-Cluster provisioning is outside of scope of this project. All tools work with kubectl current context.
-
-You can also run this app locally, instructions for running locally available below.
-
-```bash
-# Create secret (APIKEY from your env)
-kubectl create secret generic stock-ticker-secret --from-literal=APIKEY=$APIKEY
-
-# Deploy
-kubectl apply -f k8s/
-kubectl port-forward svc/stock-ticker 8080:80
-
-# Test (same as local)
-curl http://localhost:8080/v1/stock
-```
-
-## Design Decisions and Extra Features
-
-This project includes a `demo` directory that contains documentation and walkthroughs for various features, showcasing extra-mile efforts in observability and resilience.
-
-For detailed information on design decisions, architecture, and feature demonstrations, please see the [demo README](./demo/README.md).
-
-
-## Taskfile
-
-Install Taskfile: https://taskfile.dev/installation/
-
-If you are on Mac install with `brew`:
-```bash
-brew install go-task
-```
-
-Task is not required to work with this project, equivalents are provided below.
-Note that you need to source env variables or provide them in-line, refer to config section at the top of this README.
-Also note that docker-push will not work OOTB because my registry is hardcoded in the variable in Taskfile.
-
-<details>
-<summary>Bash equivalents (no Taskfile required)</summary>
-
-| Task Command | Bash Equivalent |
-|--------------|-----------------|
-| `task build` | `go build -o server ./cmd/api` |
-| `task run` | `go run ./cmd/api` |
-| `task test` | `go test -v ./...` |
-| `task docker-build` | `docker build --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t olmigar/stock-ticker:v1 .` |
-| `task docker-push` | `docker push olmigar/stock-ticker:v1` |
-| `task k8s-apply` | `kubectl apply -f k8s/` |
-| `task k8s-delete` | `kubectl delete -f k8s/` |
-| `task port-forward` | `kubectl port-forward svc/stock-ticker 8080:80` |
-
-</details>
-
-## Run Locally
-
-```bash
-go run ./cmd/api
-
-# Test
-curl http://localhost:8080/v1/stock
-```
-
-## Endpoints
-
-Main Endpoint:
-
-- `GET /v1/stock` - Returns last NDAYS closing prices and average for SYMBOL - this relies on premium endpoint, so alternatives are provided:
-
-Additional Endpoints:
-
-- `GET /v1/stock-fallback` - Uses static fallback data source (extra)
-- `GET /v1/stock?type=demo` - Uses `demo` API Key as documented https://www.alphavantage.co/documentation/
-- `GET /v1/stock?type=free` - Uses `TIME_SERIES_DAILY` which is free.
-
-System Endpoints:
-
-- `GET /v1/health` - Health check
-
-## Extras
-
-Optional features configured via `k8s/configmap-extra.yaml`:
-
 | Variable | Description | Default |
 |----------|-------------|---------|
-| STATIC_FALLBACK_URL | Static data source URL | (empty) |
-| ENABLE_CLOUDPROFILER | Enable GCP Cloud Profiler | false |
-| GCP_PROJECT_ID | GCP project for profiler | (empty) |
-
-Following tasks have been added in standalone taskfile and intentionally not included in main Taskfile for better focus reviewing Core functionality
-
-```bash
-task -t Taskfile.extra.yaml extra:curl-fallback
-task -t Taskfile.extra.yaml extra:run-with-fallback
-```
+| `SERVER_ADDRESS` | Listen address | `:8080` |
+| `ENABLE_CLOUDPROFILER` | Enable GCP Cloud Profiler | `false` |
+| `GCP_PROJECT_ID` | GCP project (required for profiler) | — |

@@ -1,12 +1,11 @@
 version: '3'
 
 vars:
-  IMAGE_NAME: stock-ticker
+  IMAGE_NAME: perf-lab
   IMAGE: olmigar/{{.IMAGE_NAME}}
-  # Using stable v1 tag for simplicity. For production, consider semantic versioning.
   TAG: '{{.TAG | default "v1"}}'
   LOCAL_PORT: 8080
-  SVC_NAME: stock-ticker
+  SVC_NAME: perf-lab
   GIT_SHA:
     sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
 
@@ -37,7 +36,7 @@ tasks:
       - docker build --build-arg GIT_SHA={{.GIT_SHA}} -t {{.IMAGE}}:{{.TAG}} .
 
   docker-push:
-    desc: Push Docker image to DockerHub (update IMAGE variable to point to a registry that you have push access to)
+    desc: Push Docker image to DockerHub
     cmds:
       - docker push {{.IMAGE}}:{{.TAG}}
 
@@ -50,8 +49,17 @@ tasks:
   k8s-apply:
     desc: Apply Kubernetes manifests
     cmds:
-      - kubectl get secret stock-ticker-secret &>/dev/null || kubectl create secret generic stock-ticker-secret --from-literal=APIKEY=$APIKEY
       - kubectl apply -f k8s/
+
+  k8s-delete:
+    desc: Delete Kubernetes resources
+    cmds:
+      - kubectl delete -f k8s/
+
+  k8s-restart:
+    desc: Restart the deployment
+    cmds:
+      - kubectl rollout restart deployment/{{.SVC_NAME}}
 
   port-forward:
     desc: Port forward to the service
@@ -62,8 +70,3 @@ tasks:
     desc: Curl the health endpoint
     cmds:
       - curl -s http://localhost:{{.LOCAL_PORT}}/v1/health | jq .
-
-  curl-stock:
-    desc: Curl the stock endpoint
-    cmds:
-      - curl -s http://localhost:{{.LOCAL_PORT}}/v1/stock | jq .

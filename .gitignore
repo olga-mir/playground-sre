@@ -10,3 +10,4 @@ server
 .vscode/
 
 .setup-env
+.claude/settings.local.json

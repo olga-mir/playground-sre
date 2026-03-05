@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stock-ticker
+  name: perf-lab
   labels:
-    app: stock-ticker
+    app: perf-lab
 spec:
   replicas: 2
   strategy:
@@ -13,11 +13,11 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: stock-ticker
+      app: perf-lab
   template:
     metadata:
       labels:
-        app: stock-ticker
+        app: perf-lab
     spec:
       terminationGracePeriodSeconds: 15
       affinity:
@@ -30,23 +30,15 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - stock-ticker
+                  - perf-lab
               topologyKey: "kubernetes.io/hostname"
       containers:
-        - name: stock-ticker
-          image: olmigar/stock-ticker:v1
+        - name: perf-lab
+          image: olmigar/perf-lab:v1
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
-          envFrom:
-            - configMapRef:
-                name: stock-ticker-config
-            - secretRef:
-                name: stock-ticker-secret
-            - configMapRef:
-                name: stock-ticker-config-extra
-                optional: true
           resources:
             requests:
               cpu: 100m
