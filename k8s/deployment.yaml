@@ -34,7 +34,7 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       containers:
         - name: perf-lab
-          image: olmigar/perf-lab:v1
+          image: olmigar/perf-lab:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:perf-lab"}
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

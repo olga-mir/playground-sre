@@ -1,0 +1,32 @@
+name: Build and Push
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          TS=$(date -u +%Y%m%d%H%M%S)
+          SHA=$(git rev-parse --short HEAD)
+          echo "tag=main-${TS}-${SHA}" >> $GITHUB_OUTPUT
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: GIT_SHA=${{ github.sha }}
+          tags: olmigar/perf-lab:${{ steps.tag.outputs.tag }}

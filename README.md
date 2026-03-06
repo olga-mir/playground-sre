@@ -8,6 +8,16 @@ A Go web server for exploring HTTP server performance under load when workloads 
 
 Each scenario is a dedicated endpoint with tunable parameters. Hit it with a load generator (Fortio, `hey`, `wrk`) and watch the metrics.
 
+## Platform Integration
+
+This service is deployed to the `sre` namespace on the `apps-dev` GKE cluster, managed by FluxCD from the platform repo [`github.com/olga-mir/playground`](https://github.com/olga-mir/playground).
+
+- The platform watches `k8s/` in this repo directly — no manual manifest copying needed.
+- Image promotion is fully automatic: CI pushes a new tag → Flux detects it → Flux commits the updated tag to `k8s/deployment.yaml` → Flux deploys the new version.
+- Image tag format: `main-<YYYYMMDDHHMMSS>-<short-sha>`. Flux selects the latest by sorting numerically on the timestamp.
+- **To deploy:** merge a PR to `main`. CI builds and pushes; Flux promotes within ~5 minutes.
+- **One manual prerequisite:** the platform cluster needs an SSH deploy key secret named `playground-sre-deploy-key` in the `flux-system` namespace with push access to this repo (required for Flux image automation to commit tag updates back).
+
 ## Scenarios
 
 | Endpoint | What it exercises | Key parameters |
