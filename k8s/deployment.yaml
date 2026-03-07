@@ -35,7 +35,7 @@ spec:
       serviceAccountName: perf-lab
       containers:
       - name: perf-lab
-        image: index.docker.io/olmigar/perf-lab:main-20260307050145-fe8a00e # {"$imagepolicy": "flux-system:perf-lab"}
+        image: index.docker.io/olmigar/perf-lab:main-20260307052247-0ec8f42 # {"$imagepolicy": "flux-system:perf-lab"}
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
