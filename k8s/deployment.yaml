@@ -33,27 +33,27 @@ spec:
                   - perf-lab
               topologyKey: "kubernetes.io/hostname"
       containers:
-        - name: perf-lab
-          image: olmigar/perf-lab:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:perf-lab"}
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-              name: http
-          resources:
-            requests:
-              cpu: 100m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
-          livenessProbe:
-            httpGet:
-              path: /v1/health
-              port: http
-            initialDelaySeconds: 1
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /v1/health
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 5
+      - name: perf-lab
+        image: index.docker.io/olmigar/perf-lab:main-20260306071911-62a76b6 # {"$imagepolicy": "flux-system:perf-lab"}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: 1
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
