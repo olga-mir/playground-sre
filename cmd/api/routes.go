@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+
 	cm "github.com/olga-mir/playground-sre/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
@@ -20,28 +22,27 @@ func (app *application) RegisterRoutes(router chi.Router) {
 	// Prometheus metrics endpoint – scraped by GKE Managed Prometheus via PodMonitoring.
 	router.Handle("/metrics", app.tel.Handler)
 
-	// --- Scenario endpoints (with access logging + per-route rate limiting) ---
+	// --- Scenario endpoints ---
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.Logger)
+		// Access logging is off by default — too noisy under load.
+		// Set LOG_LEVEL=debug in the ConfigMap to enable it.
+		if app.config.LogLevel == "debug" {
+			r.Use(middleware.Logger)
+		}
 
-		// Sleep: baseline, cheap to call repeatedly – moderate rate limit.
-		r.With(cm.RateLimiter(50, 10, app.rateLimitExceededResponse)).
-			Get("/v1/scenarios/sleep", app.sleepHandler)
-
-		// CPU: deliberately expensive – conservative rate limit to avoid DoS.
-		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
-			Get("/v1/scenarios/cpu", app.cpuHandler)
-
-		// Upstream: makes outbound HTTP calls – moderate limit.
-		r.With(cm.RateLimiter(10, 3, app.rateLimitExceededResponse)).
-			Get("/v1/scenarios/upstream", app.upstreamHandler)
-
-		// Disk: allocates large temp files – conservative limit.
-		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
-			Get("/v1/scenarios/disk", app.diskHandler)
-
-		// Fanout: can spawn thousands of goroutines – conservative limit.
-		r.With(cm.RateLimiter(5, 2, app.rateLimitExceededResponse)).
-			Get("/v1/scenarios/fanout", app.fanoutHandler)
+		r.With(app.maybeRateLimit(50, 10)).Get("/v1/scenarios/sleep", app.sleepHandler)
+		r.With(app.maybeRateLimit(5, 2)).Get("/v1/scenarios/cpu", app.cpuHandler)
+		r.With(app.maybeRateLimit(10, 3)).Get("/v1/scenarios/upstream", app.upstreamHandler)
+		r.With(app.maybeRateLimit(5, 2)).Get("/v1/scenarios/disk", app.diskHandler)
+		r.With(app.maybeRateLimit(5, 2)).Get("/v1/scenarios/fanout", app.fanoutHandler)
 	})
+}
+
+// maybeRateLimit returns a rate-limiting middleware, or a passthrough if
+// DISABLE_RATE_LIMIT=true is set in the config (useful during load tests).
+func (app *application) maybeRateLimit(rps float64, burst int) func(http.Handler) http.Handler {
+	if app.config.DisableRateLimit {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return cm.RateLimiter(rps, burst, app.rateLimitExceededResponse)
 }

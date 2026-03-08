@@ -25,6 +25,15 @@ type Config struct {
 
 	// EnableCloudProfiler enables the Google Cloud Profiler.
 	EnableCloudProfiler bool
+
+	// LogLevel controls verbosity. Set to "debug" to enable per-request access
+	// logs. Any other value (including the default empty string) disables them.
+	// Request-level logging is too noisy during load tests.
+	LogLevel string
+
+	// DisableRateLimit bypasses all per-route rate limiting when true.
+	// Set to true during load tests where the rate limiter would cap QPS.
+	DisableRateLimit bool
 }
 
 // Load reads configuration from environment variables and returns a Config struct.
@@ -36,6 +45,8 @@ func Load() *Config {
 
 	gcpProjectID := os.Getenv("GCP_PROJECT_ID")
 	enableCloudProfiler := os.Getenv("ENABLE_CLOUDPROFILER") == "true"
+	logLevel := os.Getenv("LOG_LEVEL")
+	disableRateLimit := os.Getenv("DISABLE_RATE_LIMIT") == "true"
 
 	return &Config{
 		ServerAddress: addr,
@@ -49,5 +60,7 @@ func Load() *Config {
 		IdleTimeout:         60 * time.Second,
 		GCPProjectID:        gcpProjectID,
 		EnableCloudProfiler: enableCloudProfiler,
+		LogLevel:            logLevel,
+		DisableRateLimit:    disableRateLimit,
 	}
 }
