@@ -1,8 +1,8 @@
 name: Go
 
+# This workflow only builds image, we need this on PRs only to make sure the build works
+# Upon merge another workflow will build and push to registry
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
