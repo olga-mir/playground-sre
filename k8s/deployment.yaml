@@ -2,15 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: perf-lab
+  namespace: sre
   labels:
     app: perf-lab
 spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 1
+  # This workload must be deployed as 1 replica
+  # to ensure results can be tied to the workload scenario exactly
+  replicas: 1
   selector:
     matchLabels:
       app: perf-lab

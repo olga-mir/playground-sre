@@ -38,9 +38,14 @@ func Load() *Config {
 	enableCloudProfiler := os.Getenv("ENABLE_CLOUDPROFILER") == "true"
 
 	return &Config{
-		ServerAddress:       addr,
-		ReadTimeout:         15 * time.Second,
-		WriteTimeout:        15 * time.Second,
+		ServerAddress: addr,
+		// ReadTimeout guards against slow/malicious clients sending requests.
+		ReadTimeout: 15 * time.Second,
+		// WriteTimeout is intentionally disabled (0 = no limit). Scenario handlers
+		// run for durations controlled by the caller via the ?duration= param.
+		// A fixed server-level WriteTimeout would silently kill any scenario longer
+		// than that value, making results look like errors rather than timeouts.
+		WriteTimeout:        0,
 		IdleTimeout:         60 * time.Second,
 		GCPProjectID:        gcpProjectID,
 		EnableCloudProfiler: enableCloudProfiler,
