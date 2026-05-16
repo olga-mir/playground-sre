@@ -4,7 +4,7 @@ namespace: sre
 resources:
   - deployment.yaml
   - service.yaml
-  - pdb.yaml
+  #- pdb.yaml
   - podmonitoring.yaml
   - serviceaccount.yaml
   - configmap.yaml
