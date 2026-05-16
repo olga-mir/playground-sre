@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perf-lab-config
+  namespace: sre
+data:
+  GCP_PROJECT_ID: "apps-398909"
+  ENABLE_CLOUDPROFILER: "false"
+  LOG_LEVEL: ""
+  DISABLE_RATE_LIMIT: "false"
