@@ -1,4 +1,4 @@
-module github.com/olga-mir/playground-sre
+module github.com/olga-mir/playground-sre/perf-lab
 
 go 1.25
 

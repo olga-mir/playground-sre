@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	cm "github.com/olga-mir/playground-sre/internal/middleware"
+	cm "github.com/olga-mir/playground-sre/perf-lab/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

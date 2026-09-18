@@ -1,0 +1,52 @@
+# Ballast: a do-nothing pod that holds one *exclusive* CPU core per node in the
+# test pool, so bully-hog + victim-api + the eBPF collector + kube-system pods
+# are all squeezed onto the one remaining core.
+#
+# How it pins a core:
+#   - requests == limits for BOTH cpu and memory  => Guaranteed QoS
+#   - cpu is an integer ("1")                      => eligible for exclusive
+#     whole-core assignment by the kubelet static CPU Manager policy
+# The core is fenced off at pod-admission time regardless of actual usage, so an
+# idle `pause` container is enough -- it just parks the core.
+#
+# Requires test-pool nodes running kubelet cpuManagerPolicy: static
+# (see gke-node-system-config.yaml, wired into provision.sh). WITHOUT that
+# policy this is just a harmless idle pod that reserves 1 CPU for scheduling
+# but pins nothing.
+#
+# On e2-standard-2 (2 vCPU) this leaves 1 core for the experiment. On a bigger
+# machine type, bump the cpu request to (node vCPUs - 1).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ballast
+  namespace: default
+  labels:
+    app: ballast
+spec:
+  selector:
+    matchLabels:
+      app: ballast
+  template:
+    metadata:
+      labels:
+        app: ballast
+    spec:
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: ballast
+        image: registry.k8s.io/pause:3.10
+        resources:
+          requests:
+            cpu: "1"          # one whole core, claimed exclusively via static CPU Manager
+            memory: "64Mi"
+          limits:
+            cpu: "1"          # must equal the request -> Guaranteed QoS
+            memory: "64Mi"

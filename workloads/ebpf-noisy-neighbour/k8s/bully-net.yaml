@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bully-net
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bully-net
+  template:
+    metadata:
+      labels:
+        app: bully-net
+    spec:
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: stress
+        image: alexeiled/stress-ng:latest
+        # Network I/O noisy neighbour (proposal §3A): --sock + --udp push a high
+        # packet rate over loopback between forked workers, driving NET_RX /
+        # ksoftirqd softirq processing that steals CPU from user threads on the
+        # shared core. Single pod, no Service needed.
+        args:
+        - "--sock"
+        - "4"
+        - "--udp"
+        - "2"
+        - "--timeout"
+        - "0"                     # run until deleted
+        resources:
+          requests:
+            cpu: "50m"           # scheduling only — softirq load is the point
+          # NO CPU LIMITS: Burstable QoS, so it stays in the shared CPU pool
+          # (never handed an exclusive core by the static CPU manager).

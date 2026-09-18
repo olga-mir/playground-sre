@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cpu-stressor
+  namespace: default
+  labels:
+    app: cpu-stressor
+spec:
+  selector:
+    matchLabels:
+      app: cpu-stressor
+  template:
+    metadata:
+      labels:
+        app: cpu-stressor
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: stressor
+          image: alexeiled/stress-ng:latest
+          # 4 CPU workers per node — enough to saturate vCPUs and drive run-queue latency
+          args:
+            - "--cpu=4"
+            - "--cpu-method=matrixprod"
+            - "--timeout=0"
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "64Mi"
+            limits:
+              cpu: "4"
+              memory: "128Mi"

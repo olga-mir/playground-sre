@@ -11,8 +11,8 @@ import (
 
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
-	"github.com/olga-mir/playground-sre/internal/config"
-	"github.com/olga-mir/playground-sre/internal/telemetry"
+	"github.com/olga-mir/playground-sre/perf-lab/internal/config"
+	"github.com/olga-mir/playground-sre/perf-lab/internal/telemetry"
 )
 
 // gitSHA is set at build time via -ldflags="-X main.gitSHA=<sha>".
@@ -29,7 +29,7 @@ func main() {
 	cfg := config.Load()
 
 	// Optional: GCP Cloud Profiler (flame graphs in Cloud Console).
-	if cfg.EnableCloudProfiler && cfg.GCPProjectID != "" {
+	if cfg.EnableCloudProfiler {
 		profCfg := profiler.Config{
 			Service:        "perf-lab",
 			ServiceVersion: "1.0.0",

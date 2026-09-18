@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perf-lab-config
+data:
+  ENABLE_CLOUDPROFILER: "true"
+  # Set to "debug" to enable per-request access logs. Off by default — too noisy under load.
+  LOG_LEVEL: ""
+  # Set to "true" to bypass rate limiting. Useful during load tests.
+  DISABLE_RATE_LIMIT: "false"

@@ -1,0 +1,26 @@
+# Kubelet system configuration for the GKE "test-pool" node pool.
+#
+# Applied at node-pool creation in provision.sh via:
+#   gcloud container node-pools create ... \
+#     --system-config-from-file=gke-node-system-config.yaml
+#
+# cpuManagerPolicy: static lets a Guaranteed-QoS pod that requests an *integer*
+# number of CPUs receive those cores exclusively -- they are removed from the
+# shared pool that every other pod (Burstable / BestEffort, system DaemonSets)
+# is confined to. The ballast DaemonSet (k8s/ballast.yaml) relies on this to pin
+# one whole core per node so the noisy-neighbour experiment (bully-hog +
+# victim-api + the eBPF collector + kube-system pods) is forced onto the
+# remaining CPU.
+#
+# Sizing on e2-standard-2 (2 vCPU):
+#   GKE auto-reserves ~70m CPU (kube-reserved + system-reserved). The static
+#   policy rounds that up to 1 whole core kept in the shared pool, leaving
+#   exactly 1 core assignable exclusively. The ballast claims it -> the
+#   experiment runs on 1 core. If you change the machine type, change the
+#   ballast cpu request to (node vCPUs - 1) to keep the same split.
+#
+# Note: changing cpuManagerPolicy on an existing node pool requires the nodes to
+# be recreated (the kubelet CPU-manager state file must be cleared). Setting it
+# at creation time, as here, is clean.
+kubeletConfig:
+  cpuManagerPolicy: static

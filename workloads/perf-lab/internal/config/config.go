@@ -20,7 +20,9 @@ type Config struct {
 	// IdleTimeout is the maximum amount of time to wait for the next request when keep-alives are enabled.
 	IdleTimeout time.Duration
 
-	// GCPProjectID is the Google Cloud project ID for Cloud Profiler.
+	// GCPProjectID is the Google Cloud project ID for Cloud Profiler. Optional:
+	// when empty, the profiler client auto-detects it from the GCE/GKE metadata
+	// server. Only needed to override that, e.g. when running off-GCP.
 	GCPProjectID string
 
 	// EnableCloudProfiler enables the Google Cloud Profiler.
