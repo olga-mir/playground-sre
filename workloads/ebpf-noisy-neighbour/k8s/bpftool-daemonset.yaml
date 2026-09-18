@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: bpftool-ds
-  namespace: test-ebpf
+  namespace: ebpf-noisy-neighbour
 spec:
   selector:
     matchLabels:

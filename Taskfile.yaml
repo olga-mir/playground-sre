@@ -1,0 +1,15 @@
+version: '3'
+
+includes:
+  perf-lab:
+    taskfile: ./workloads/perf-lab/Taskfile.yaml
+    dir: ./workloads/perf-lab
+  ebpf:
+    taskfile: ./workloads/ebpf-noisy-neighbour/Taskfile.yaml
+    dir: ./workloads/ebpf-noisy-neighbour
+
+tasks:
+  help:
+    desc: List all tasks across all workloads
+    cmds:
+      - task --list

@@ -6,7 +6,7 @@ apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
   name: ebpf-metrics
-  namespace: test-ebpf
+  namespace: ebpf-noisy-neighbour
 spec:
   selector:
     matchLabels:
