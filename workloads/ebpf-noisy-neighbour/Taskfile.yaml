@@ -51,9 +51,14 @@ tasks:
       - 'kubectl config get-contexts {{.KUBE_CONTEXT}} >/dev/null 2>&1 || echo "WARN: kube context {{.KUBE_CONTEXT}} not found — run: gcloud container clusters get-credentials {{.CLUSTER_NAME}} --location {{.CLUSTER_LOCATION}}"'
 
   provision-cluster:
-    desc: Provision GKE cluster with gcloud
+    desc: >
+      Provision a standalone GKE cluster with a tainted noisy-node pool for
+      manual testing (gcloud, no GitOps/Flux involved). CLUSTER_LOCATION must
+      be exported as a zone (e.g. australia-southeast1-a) — on first
+      provisioning there's no live cluster yet for it to auto-detect from, so
+      it would otherwise fall back to the REGION var, which --zone rejects.
     cmds:
-      - CLUSTER_NAME={{.CLUSTER_NAME}} ./provision.sh
+      - PROJECT_ID={{.PROJECT_ID}} CLUSTER_LOCATION={{.CLUSTER_LOCATION}} CLUSTER_NAME={{.CLUSTER_NAME}} ./provision.sh
 
   delete-cluster:
     desc: Delete GKE cluster
@@ -108,12 +113,16 @@ tasks:
       - clang -O2 -g -target bpf -D__TARGET_ARCH_x86 -I./bpf -I/usr/include/x86_64-linux-gnu -I/usr/include/bpf -c ./bpf/noisy-neighbour.bpf.c -o ./bpf/noisy-neighbour.bpf.o
 
   deploy-k8s:
-    desc: Deploy eBPF daemonset to Kubernetes
+    desc: >
+      Deploy the eBPF daemonset to a standalone manually-provisioned cluster
+      (uses the image built by local-build-image/lima-build-image, not the
+      Flux-pinned GitOps image). Creates the namespace if missing.
     vars:
       FULL_IMAGE_TAG: '{{.IMAGE_PATH}}:latest'
     cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace.yaml
       - >
-        IMAGE={{.FULL_IMAGE_TAG}} envsubst < k8s/ebpf-daemonset.yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
+        IMAGE={{.FULL_IMAGE_TAG}} envsubst < k8s/daemonset-manual.yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
 
   deploy-monitoring:
     desc: Deploy PodMonitoring CRD for GKE Managed Prometheus

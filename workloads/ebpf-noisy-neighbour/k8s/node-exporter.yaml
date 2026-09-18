@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter
-  namespace: test-ebpf
+  namespace: ebpf-noisy-neighbour
   labels:
     app: node-exporter
 spec:
@@ -86,7 +86,7 @@ apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
   name: node-exporter
-  namespace: test-ebpf
+  namespace: ebpf-noisy-neighbour
 spec:
   selector:
     matchLabels:

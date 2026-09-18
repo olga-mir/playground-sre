@@ -66,6 +66,32 @@ workloads/ebpf-noisy-neighbour/
 
 Experiment-time workloads (bully, ballast, victim) are in `k8s/` but deployed ad-hoc with `task ebpf:deploy-bully` — not managed by GitOps Kustomization.
 
+#### Manual testing (no GitOps)
+
+The GitOps path deploys to the shared `apps-dev` cluster wired up in the `playground` repo. For a throwaway cluster you own, spin one up directly with gcloud:
+
+```bash
+export PROJECT_ID=<your-project>
+export REGION=<your-region>            # e.g. australia-southeast1, used for Artifact Registry
+export CLUSTER_LOCATION=<your-zone>    # e.g. australia-southeast1-a, required on first provision
+
+task ebpf:provision-cluster            # zonal GKE cluster + tainted/labelled noisy-node pool
+task ebpf:local-build-image            # cross-compiles and pushes to your own Artifact Registry repo
+task ebpf:deploy-k8s                   # applies namespace.yaml + k8s/daemonset-manual.yaml (envsubst'd image, not the Flux-pinned one)
+task ebpf:deploy-monitoring            # optional: PodMonitoring
+task ebpf:deploy-node-exporter         # optional: node-exporter for steal-time metrics
+task ebpf:deploy-ballast               # optional: pin 1 exclusive core per test node
+task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
+task ebpf:deploy-victim                # optional: test workload to observe from the bully
+
+task ebpf:list-pod-cgroups             # map pods -> eBPF cgroup labels
+task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF maps (needs bpftool-daemonset)
+
+task ebpf:delete-cluster
+```
+
+`k8s/daemonset-manual.yaml` is the standalone counterpart to `k8s/daemonset.yaml` — same pod spec, but templated with `${IMAGE}` instead of the Flux-pinned Docker Hub image, and deliberately excluded from `kustomization.yaml` so it never leaks into GitOps.
+
 ## Task dispatch
 
 ```bash
