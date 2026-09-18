@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/olga-mir/playground-sre/internal/scenarios"
-	"github.com/olga-mir/playground-sre/internal/telemetry"
+	"github.com/olga-mir/playground-sre/perf-lab/internal/scenarios"
+	"github.com/olga-mir/playground-sre/perf-lab/internal/telemetry"
 )
 
 // scenarioMetrics holds OTEL instruments for scenario-specific observability.

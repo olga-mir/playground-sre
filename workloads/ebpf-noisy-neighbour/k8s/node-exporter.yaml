@@ -1,0 +1,97 @@
+---
+# node-exporter — surfaces node-level CPU metrics that GKE's built-in system
+# metrics don't expose, in particular:
+#
+#   node_cpu_seconds_total{mode="steal"}
+#
+# Hypervisor steal time is a real, documented characteristic of GCP's E2
+# (cost-optimized, dynamically-managed) machine family and is the untested
+# hypothesis in docs/latency-anomaly-investigation.md section 3. Scoped to the
+# dedicated noisy-node test pool only so it can't perturb the rest of the cluster.
+#
+# Check query once scraped:
+#   rate(node_cpu_seconds_total{mode="steal"}[5m])
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: test-ebpf
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+    spec:
+      hostNetwork: true
+      hostPID: true
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: node-exporter
+        image: quay.io/prometheus/node-exporter:latest
+        args:
+        - --path.procfs=/host/proc
+        - --path.sysfs=/host/sys
+        - --path.rootfs=/host/root
+        - --web.listen-address=:9100
+        ports:
+        - name: metrics
+          containerPort: 9100
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 64Mi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+        volumeMounts:
+        - name: proc
+          mountPath: /host/proc
+          readOnly: true
+        - name: sys
+          mountPath: /host/sys
+          readOnly: true
+        - name: root
+          mountPath: /host/root
+          mountPropagation: HostToContainer
+          readOnly: true
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: root
+        hostPath:
+          path: /
+---
+# GKE Managed Prometheus scrape config for node-exporter. Same shape as
+# k8s/pod-monitoring.yaml. Results appear in Cloud Monitoring under
+# prometheus.googleapis.com/node_cpu_seconds_total/counter etc.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: node-exporter
+  namespace: test-ebpf
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics

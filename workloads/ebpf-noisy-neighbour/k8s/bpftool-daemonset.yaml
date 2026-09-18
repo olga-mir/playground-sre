@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: bpftool-ds
+  namespace: test-ebpf
+spec:
+  selector:
+    matchLabels:
+      name: bpftool
+  template:
+    metadata:
+      labels:
+        name: bpftool
+    spec:
+      hostPID: true
+      hostNetwork: true
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: bpftool
+        image: ubuntu:latest
+        command: 
+        - "/bin/bash"
+        - "-c"
+        - |
+          apt-get update && \
+          apt-get install -y git make gcc libelf-dev libssl-dev pkg-config && \
+          git clone --depth 1 --recurse-submodules https://github.com/libbpf/bpftool.git && \
+          cd bpftool/src && \
+          make install && \
+          cd .. && \
+          rm -rf bpftool && \
+          sleep infinity
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: sys
+            mountPath: /sys
+          - name: debugfs
+            mountPath: /sys/kernel/debug
+      volumes:
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: debugfs
+          hostPath:
+            path: /sys/kernel/debug

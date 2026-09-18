@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ebpf-noisy-neighbour
+resources:
+  - namespace.yaml
+  - daemonset.yaml
+  - pod-monitoring.yaml
+  - node-exporter.yaml
+  - bpftool-daemonset.yaml
+  # Experiment-time workloads (bully, ballast, victim) are deployed ad-hoc, not via GitOps

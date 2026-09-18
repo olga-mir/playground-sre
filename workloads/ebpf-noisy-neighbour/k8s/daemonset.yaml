@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ebpf-ds
+  namespace: ebpf-noisy-neighbour
+spec:
+  selector:
+    matchLabels:
+      app: ebpf-ds
+  template:
+    metadata:
+      labels:
+        app: ebpf-ds
+    spec:
+      hostPID: true  # Required to access host syscalls
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: ebpf-ds
+        image: index.docker.io/olmigar/experiment-ebpf:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:experiment-ebpf"}
+        ports:
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PSI_PROC_PATH
+          value: /host/proc/pressure
+        securityContext:
+          privileged: true  # Required for eBPF operations
+        volumeMounts:
+        - name: sys-kernel-debug
+          mountPath: /sys/kernel/debug
+        - name: sys-fs-cgroup
+          mountPath: /sys/fs/cgroup
+          readOnly: true
+        - name: host-proc-pressure
+          mountPath: /host/proc/pressure
+          readOnly: true
+      volumes:
+      - name: sys-kernel-debug
+        hostPath:
+          path: /sys/kernel/debug
+      - name: sys-fs-cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: host-proc-pressure
+        hostPath:
+          path: /proc/pressure

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bully-io
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bully-io
+  template:
+    metadata:
+      labels:
+        app: bully-io
+    spec:
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: stress
+        image: alexeiled/stress-ng:latest
+        # Disk I/O noisy neighbour (proposal §2A): --hdd + --iomix dirty the page
+        # cache fast enough to trip vm.dirty_*_ratio, forcing wb_workfn / kworker
+        # writeback and block-queue contention that a pure-CPU bully never causes.
+        args:
+        - "--hdd"
+        - "2"
+        - "--hdd-bytes"
+        - "512m"
+        - "--iomix"
+        - "2"
+        - "--temp-path"          # write into the emptyDir, not the container rootfs
+        - "/scratch"
+        - "--timeout"
+        - "0"                     # run until deleted
+        volumeMounts:
+        - name: scratch
+          mountPath: /scratch
+        resources:
+          requests:
+            cpu: "50m"           # scheduling only — I/O is the point, not CPU
+          # NO CPU LIMITS: Burstable QoS, so it stays in the shared CPU pool
+          # (never handed an exclusive core by the static CPU manager).
+      volumes:
+      - name: scratch
+        emptyDir:
+          sizeLimit: 8Gi         # node-disk backed; cap so a runaway run can't fill the node

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bully-hog
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bully-hog
+  template:
+    metadata:
+      labels:
+        app: bully-hog
+    spec:
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      containers:
+      - name: stress
+        image: alexeiled/stress-ng:latest
+        args:
+        - "--cpu"
+        - "2"                  # 2 workers oversubscribing the 1 shared core left by the ballast
+        - "--cpu-method"
+        - "matrixprod"
+        resources:
+          requests:
+            cpu: "100m"        # Minimum request to get scheduled easily
+          # DO NOT SET CPU LIMITS: allows it to consume all unallocated core time
+          # (Burstable QoS -> stays in the shared pool, never gets an exclusive core)

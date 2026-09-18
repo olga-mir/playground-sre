@@ -1,0 +1,19 @@
+---
+# GKE Managed Prometheus PodMonitoring — scrapes :9090/metrics on every node.
+# Requires Google Cloud Managed Service for Prometheus to be enabled on the cluster.
+# Results appear in Cloud Monitoring under prometheus.googleapis.com/ebpf_*.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: ebpf-metrics
+  namespace: test-ebpf
+spec:
+  selector:
+    matchLabels:
+      app: ebpf-ds
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+
+
