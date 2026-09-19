@@ -22,7 +22,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: ebpf-ds
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/experiment-ebpf/experiment-ebpf:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:experiment-ebpf"}
+        image: index.docker.io/olmigar/experiment-ebpf:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:experiment-ebpf"}
         ports:
         - name: metrics
           containerPort: 9090

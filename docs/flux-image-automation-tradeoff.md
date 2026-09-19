@@ -1,11 +1,46 @@
-# Open decision: Flux image automation vs. GCP project ID leaking into git
+# Decision: Flux image automation vs. GCP project ID leaking into git
 
-Status: **unresolved, revisit before bringing `apps-dev` back up**
+Status: **resolved 2026-09-20 — chose Option B (Docker Hub)**
 
-## The problem
+## Decision
 
-`workloads/perf-lab/k8s/deployment.yaml` and `workloads/ebpf-noisy-neighbour/k8s/daemonset.yaml`
-currently reference images as:
+Went with **Option B**: reverted `perf-lab` and `experiment-ebpf` to Docker Hub
+(`olmigar/perf-lab`, `olmigar/experiment-ebpf`), keeping Flux's native
+`ImageRepository`/`ImagePolicy`/`ImageUpdateAutomation` loop working exactly as designed. The
+deciding factor was that Flux's own image-promotion automation — not just CI building and
+deploying — was the point of the original setup, and Option A would have given that up.
+
+Docker Hub's stored, expiring token (the original problem that motivated the Artifact Registry
+migration in the first place) is accepted as the trade-off. The token is being rotated now
+(GitHub Actions `DOCKERHUB_TOKEN` secret); no expiry-avoidance work (e.g. a no-expiry token) was
+in scope for this pass.
+
+**What changed to implement this:**
+- `playground-sre`: `workloads/perf-lab/k8s/deployment.yaml` and
+  `workloads/ebpf-noisy-neighbour/k8s/daemonset.yaml` — image refs back to
+  `index.docker.io/olmigar/...`, no `${REGION}`/`${PROJECT_ID}` placeholders.
+- `playground-sre`: `.github/workflows/build-push.yml` /
+  `build-push-ebpf.yml` — back to `docker/login-action` with
+  `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`; GCP WIF auth step removed.
+- `playground-sre`: `AGENTS.md` updated to match (image refs, GitOps table, CI paragraph).
+- `playground`: `kubernetes/tenants/base/sre/image-repository.yaml` and
+  `kubernetes/tenants/base/sre-ebpf/image-repository.yaml` — `spec.image` back to
+  `index.docker.io/olmigar/...`, `provider: gcp` removed (defaults to generic/Docker Hub).
+
+**Not touched, and why:** `workloads/perf-lab/k8s/serviceaccount.yaml` still uses
+`${PROJECT_ID}` for its `iam.gke.io/gcp-service-account` Workload Identity annotation — that's
+resolved once by the `sre` Flux Kustomization's `postBuild.substituteFrom` (`platform-config`),
+same as the rest of the `playground` repo, and is never touched by `ImageUpdateAutomation`. It
+carries none of the leak risk described below, so it was left as-is. The out-of-band
+`kubectl annotate serviceaccount image-reflector-controller ... iam.gke.io/gcp-service-account=`
+binding (for AR access) was never committed to git and is now moot; if it was ever applied to a
+live `apps-dev`, it can be removed next time that cluster is up, but there's nothing to clean up
+in either repo.
+
+## The original problem
+
+Before this decision, `workloads/perf-lab/k8s/deployment.yaml` and
+`workloads/ebpf-noisy-neighbour/k8s/daemonset.yaml` referenced images as:
 
 ```yaml
 image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/perf-lab/perf-lab:main-...  # {"$imagepolicy": "flux-system:perf-lab"}
@@ -47,12 +82,11 @@ Registry image paths always embed the project ID structurally
 image automation writes back to git will contain the project ID — there's no placeholder-safe
 way to let Flux do it.
 
-**Current state:** this has not actually happened yet — `apps-dev` isn't running, so
-`ImageUpdateAutomation` has never reconciled against these files, and the committed
-placeholders are still intact. The risk is latent, not realized. If `apps-dev` comes back up
-with the current `ImageRepository`/`ImagePolicy`/`ImageUpdateAutomation` config
-(`playground` repo, `kubernetes/tenants/base/sre/` and `sre-ebpf/`) before this is resolved,
-the leak **will** occur on the first detected tag change.
+**Outcome:** this never actually happened — `apps-dev` wasn't running while the AR-based
+`ImageRepository`/`ImagePolicy`/`ImageUpdateAutomation` config was live, so
+`ImageUpdateAutomation` never reconciled against these files, and the placeholders were never
+overwritten. The risk was latent and was closed off by the decision above (Option B) before
+`apps-dev` came back up.
 
 ## Options
 
@@ -87,8 +121,8 @@ Making the Artifact Registry repo public does **not** fix this — the leak is a
 ID appearing in the image *path string* itself (`.../<project-id>/...`), not about registry
 access control. A public AR repo still embeds the project ID in every reference.
 
-## Recommendation (non-binding)
+## Why not A
 
-No strong recommendation — genuinely a trade-off between "lose one piece of Flux automation"
-(A) vs. "keep a manually-rotated secret and public images" (B). Revisit when `apps-dev` is
-being brought back up.
+Both options were genuine trade-offs — "lose one piece of Flux automation" (A) vs. "keep a
+manually-rotated secret and public images" (B) — with no strong technical winner. See
+**Decision** above for which was chosen and why.

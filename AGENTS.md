@@ -30,7 +30,7 @@ workloads/perf-lab/
 ```
 
 **Module:** `github.com/olga-mir/playground-sre/perf-lab`
-**Image:** `${REGION}-docker.pkg.dev/${PROJECT_ID}/perf-lab/perf-lab`
+**Image:** `index.docker.io/olmigar/perf-lab`
 **Namespace:** `sre`
 
 | Variable | Description | Default |
@@ -61,7 +61,7 @@ workloads/ebpf-noisy-neighbour/
 ```
 
 **Module:** `github.com/olga-mir/playground-sre/ebpf-noisy-neighbour`
-**Image:** `${REGION}-docker.pkg.dev/${PROJECT_ID}/experiment-ebpf/experiment-ebpf`
+**Image:** `index.docker.io/olmigar/experiment-ebpf`
 **Namespace:** `ebpf-noisy-neighbour`
 
 Experiment-time workloads (bully, ballast, victim) are in `k8s/` but deployed ad-hoc with `task ebpf:deploy-bully` — not managed by GitOps Kustomization.
@@ -90,7 +90,7 @@ task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF 
 task ebpf:delete-cluster
 ```
 
-`k8s/daemonset-manual.yaml` is the standalone counterpart to `k8s/daemonset.yaml` — same pod spec, but templated with `${IMAGE}` instead of the Flux-pinned Artifact Registry image, and deliberately excluded from `kustomization.yaml` so it never leaks into GitOps.
+`k8s/daemonset-manual.yaml` is the standalone counterpart to `k8s/daemonset.yaml` — same pod spec, but templated with `${IMAGE}` instead of the Flux-pinned Docker Hub image, and deliberately excluded from `kustomization.yaml` so it never leaks into GitOps.
 
 ## Task dispatch
 
@@ -108,10 +108,10 @@ Deployed to the `apps-dev` cluster via Flux. The `playground` repo ([github.com/
 
 | Workload | Flux Kustomization path | Namespace | Image |
 |---|---|---|---|
-| perf-lab | `./workloads/perf-lab/k8s` | `sre` | `${REGION}-docker.pkg.dev/${PROJECT_ID}/perf-lab/perf-lab` |
-| ebpf-noisy-neighbour | `./workloads/ebpf-noisy-neighbour/k8s` | `ebpf-noisy-neighbour` | `${REGION}-docker.pkg.dev/${PROJECT_ID}/experiment-ebpf/experiment-ebpf` |
+| perf-lab | `./workloads/perf-lab/k8s` | `sre` | `olmigar/perf-lab` |
+| ebpf-noisy-neighbour | `./workloads/ebpf-noisy-neighbour/k8s` | `ebpf-noisy-neighbour` | `olmigar/experiment-ebpf` |
 
-CI pushes to Artifact Registry via GitHub OIDC / Workload Identity Federation (no stored registry credentials) — see `.github/workflows/build-push.yml` and `build-push-ebpf.yml`. `PROJECT_ID`/`REGION` are GitHub repo secrets, never committed. Flux's `image-reflector-controller` reads tags the same keyless way, via GKE Workload Identity bound out-of-band with `kubectl annotate` (not committed to git, since the FluxInstance root sync has no variable-substitution mechanism to draw on — see the `playground` repo's bootstrap docs).
+CI pushes to Docker Hub using a stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` (GitHub repo secrets) — see `.github/workflows/build-push.yml` and `build-push-ebpf.yml`. Flux's `image-reflector-controller` polls the public Docker Hub API for new tags, no in-cluster credential needed. Docker Hub was chosen over Artifact Registry specifically because it keeps Flux's `ImageUpdateAutomation` working as designed: AR image paths always embed the GCP project ID (`<region>-docker.pkg.dev/<project-id>/...`), and `ImageUpdateAutomation` writes the fully-resolved image string straight into `k8s/*.yaml` on every tag bump — which would have leaked the project ID into this public repo on the first automated promotion. See `docs/flux-image-automation-tradeoff.md` for the full trade-off writeup. The cost of this choice is a manually-rotated Docker Hub token in GitHub secrets instead of keyless WIF.
 
 ## Architecture notes
 
