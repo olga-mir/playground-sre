@@ -5,6 +5,10 @@ on:
     branches: ["main"]
     paths: ["workloads/ebpf-noisy-neighbour/**"]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-push:
     runs-on: ubuntu-latest
@@ -18,11 +22,20 @@ jobs:
           SHA=$(git rev-parse --short HEAD)
           echo "tag=main-${TS}-${SHA}" >> $GITHUB_OUTPUT
 
-      - name: Log in to Docker Hub
+      - name: Authenticate to GCP
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_PUSH_SA }}
+
+      - name: Log in to Artifact Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: australia-southeast1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -36,4 +49,4 @@ jobs:
           context: ./workloads/ebpf-noisy-neighbour
           push: true
           platforms: linux/amd64
-          tags: olmigar/experiment-ebpf:${{ steps.tag.outputs.tag }}
+          tags: australia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/experiment-ebpf/experiment-ebpf:${{ steps.tag.outputs.tag }}
