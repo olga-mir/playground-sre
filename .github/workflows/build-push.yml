@@ -3,7 +3,9 @@ name: Build and Push perf-lab
 on:
   push:
     branches: ["main"]
-    paths: ["workloads/perf-lab/**"]
+    paths:
+      - "workloads/perf-lab/**"
+      - "!workloads/perf-lab/k8s/**" # ImageUpdateAutomation writes here — don't rebuild on tag bumps
 
 jobs:
   build-push:

@@ -3,7 +3,9 @@ name: Build and Push experiment-ebpf
 on:
   push:
     branches: ["main"]
-    paths: ["workloads/ebpf-noisy-neighbour/**"]
+    paths:
+      - "workloads/ebpf-noisy-neighbour/**"
+      - "!workloads/ebpf-noisy-neighbour/k8s/**" # ImageUpdateAutomation writes here — don't rebuild on tag bumps
 
 jobs:
   build-push:
