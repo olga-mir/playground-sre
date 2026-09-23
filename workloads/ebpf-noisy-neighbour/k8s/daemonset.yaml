@@ -12,7 +12,7 @@ spec:
       labels:
         app: ebpf-ds
     spec:
-      hostPID: true  # Required to access host syscalls
+      hostPID: true # Required to access host syscalls
       nodeSelector:
         workload: noisy-node
       tolerations:
@@ -22,7 +22,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: ebpf-ds
-        image: index.docker.io/olmigar/experiment-ebpf:main-19700101000000-0000000 # {"$imagepolicy": "flux-system:experiment-ebpf"}
+        image: index.docker.io/olmigar/experiment-ebpf:main-20260919204158-6b52e9f # {"$imagepolicy": "flux-system:experiment-ebpf"}
         ports:
         - name: metrics
           containerPort: 9090
@@ -31,7 +31,7 @@ spec:
         - name: PSI_PROC_PATH
           value: /host/proc/pressure
         securityContext:
-          privileged: true  # Required for eBPF operations
+          privileged: true # Required for eBPF operations
         volumeMounts:
         - name: sys-kernel-debug
           mountPath: /sys/kernel/debug
