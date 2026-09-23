@@ -20,7 +20,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ballast
-  namespace: default
+  namespace: ebpf-noisy-neighbour
   labels:
     app: ballast
 spec:

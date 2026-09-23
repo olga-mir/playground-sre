@@ -7,4 +7,8 @@ resources:
   - pod-monitoring.yaml
   - node-exporter.yaml
   - bpftool-daemonset.yaml
-  # Experiment-time workloads (bully, ballast, victim) are deployed ad-hoc, not via GitOps
+  - ballast.yaml
+  # Experiment-variant workloads (bully-*, victim-api) are deployed ad-hoc, not via
+  # GitOps -- you pick one noisy-neighbour scenario per run and tear it down after.
+  # ballast is a fixed precondition (always reserves the exclusive core), not a
+  # variant, so it's managed here like the other always-on DaemonSets.
