@@ -76,9 +76,13 @@ export REGION=<your-region>            # e.g. australia-southeast1, used for Art
 export CLUSTER_LOCATION=<your-zone>    # e.g. australia-southeast1-a, required on first provision
 
 task ebpf:provision-cluster            # zonal GKE cluster + tainted/labelled noisy-node pool
+                                       # (also runs get-credentials automatically via gcloud)
+# If the kubeconfig context is missing for any reason:
+task ebpf:get-credentials              # fetches credentials for the live cluster (auto-detects name)
+
 task ebpf:local-build-image            # cross-compiles and pushes to your own Artifact Registry repo
 task ebpf:deploy-k8s                   # applies namespace.yaml + k8s/daemonset-manual.yaml (envsubst'd image, not the Flux-pinned one)
-task ebpf:deploy-monitoring            # optional: PodMonitoring
+task ebpf:deploy-monitoring            # optional: PodMonitoring (namespace auto-created if missing)
 task ebpf:deploy-node-exporter         # optional: node-exporter for steal-time metrics
 task ebpf:deploy-ballast               # optional: pin 1 exclusive core per test node
 task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
@@ -89,6 +93,8 @@ task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF 
 
 task ebpf:delete-cluster
 ```
+
+`CLUSTER_NAME`, `CLUSTER_LOCATION`, and `KUBE_CONTEXT` are all auto-detected from the live GKE cluster via `gcloud`. You only need to export them explicitly when provisioning a fresh cluster (no live cluster to detect from yet) or to override the detected values.
 
 `k8s/daemonset-manual.yaml` is the standalone counterpart to `k8s/daemonset.yaml` — same pod spec, but templated with `${IMAGE}` instead of the Flux-pinned Docker Hub image, and deliberately excluded from `kustomization.yaml` so it never leaks into GitOps.
 

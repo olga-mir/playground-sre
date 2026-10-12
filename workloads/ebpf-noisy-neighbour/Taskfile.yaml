@@ -9,28 +9,53 @@ vars:
     sh: echo "${PROJECT_ID:?'PROJECT_ID environment variable is required'}"
   REGION:
     sh: echo "${REGION:?'REGION environment variable is required'}"
+
+  # The canonical cluster name that provision.sh will create going forward.
+  # If you have an existing cluster with a different name, export CLUSTER_NAME
+  # to match it (e.g. export CLUSTER_NAME=ebfp-experiment).
   CLUSTER_NAME: "{{.SERVICE_NAME}}-cluster"
 
   # GKE cluster location — a zone (e.g. australia-southeast1-a) for a zonal
-  # cluster, or a region for a regional one. provision.sh creates a *zonal*
-  # cluster, so this is NOT necessarily REGION (which stays a region for
-  # Artifact Registry). Auto-detected from the live cluster via gcloud; falls
-  # back to REGION when offline / not yet provisioned. Override by exporting
-  # CLUSTER_LOCATION.
+  # cluster. Auto-detected from the live cluster via gcloud (by name first,
+  # then by taking the first cluster in the project as a fallback for clusters
+  # provisioned with a different name). Falls back to CLUSTER_LOCATION env or
+  # REGION only when no cluster exists yet. Override by exporting CLUSTER_LOCATION.
   CLUSTER_LOCATION:
     sh: >
-      loc="${CLUSTER_LOCATION:-$(gcloud container clusters list
+      if [ -n "${CLUSTER_LOCATION:-}" ]; then echo "$CLUSTER_LOCATION"; exit 0; fi;
+      loc=$(gcloud container clusters list
       --project '{{.PROJECT_ID}}' --filter 'name={{.CLUSTER_NAME}}'
-      --format 'value(location)' 2>/dev/null | head -1)}";
+      --format 'value(location)' 2>/dev/null | head -1);
+      if [ -z "$loc" ]; then
+        loc=$(gcloud container clusters list
+        --project '{{.PROJECT_ID}}'
+        --format 'value(location)' 2>/dev/null | head -1);
+      fi;
       echo "${loc:-{{.REGION}}}"
+
+  # Actual cluster name resolved from the live cluster (handles clusters
+  # provisioned with a different name than CLUSTER_NAME). Falls back to
+  # CLUSTER_NAME when no cluster exists yet (pre-provisioning).
+  CLUSTER_NAME_LIVE:
+    sh: >
+      if [ -n "${CLUSTER_NAME:-}" ]; then echo "$CLUSTER_NAME"; exit 0; fi;
+      name=$(gcloud container clusters list
+      --project '{{.PROJECT_ID}}' --filter 'name={{.CLUSTER_NAME}}'
+      --format 'value(name)' 2>/dev/null | head -1);
+      if [ -z "$name" ]; then
+        name=$(gcloud container clusters list
+        --project '{{.PROJECT_ID}}'
+        --format 'value(name)' 2>/dev/null | head -1);
+      fi;
+      echo "${name:-{{.CLUSTER_NAME}}}"
 
   # Every kubectl call is pinned to an explicit context so tasks never act on
   # whatever `kubectl config current-context` happens to be. Defaults to the
   # context name `gcloud container clusters get-credentials` writes for this
-  # cluster (derived from CLUSTER_LOCATION, not REGION); override by exporting
-  # KUBE_CONTEXT (e.g. a renamed context).
+  # cluster (derived from the live cluster name + location); override by
+  # exporting KUBE_CONTEXT.
   KUBE_CONTEXT:
-    sh: echo "${KUBE_CONTEXT:-gke_{{.PROJECT_ID}}_{{.CLUSTER_LOCATION}}_{{.CLUSTER_NAME}}}"
+    sh: echo "${KUBE_CONTEXT:-gke_{{.PROJECT_ID}}_{{.CLUSTER_LOCATION}}_{{.CLUSTER_NAME_LIVE}}}"
 
   GIT_COMMIT:
     sh: git rev-parse --short HEAD
@@ -40,15 +65,21 @@ vars:
 
 tasks:
   preflight:
-    desc: Validate required environment variables
+    desc: Validate required environment variables and print resolved values
     cmds:
       - echo "PROJECT_ID={{.PROJECT_ID}}"
       - echo "REGION={{.REGION}}"
-      - echo "CLUSTER_NAME={{.CLUSTER_NAME}}"
+      - echo "CLUSTER_NAME (canonical)={{.CLUSTER_NAME}}"
+      - echo "CLUSTER_NAME_LIVE (resolved)={{.CLUSTER_NAME_LIVE}}"
       - echo "CLUSTER_LOCATION={{.CLUSTER_LOCATION}}"
       - echo "KUBE_CONTEXT={{.KUBE_CONTEXT}}"
       - echo "IMAGE_PATH={{.IMAGE_PATH}}"
-      - 'kubectl config get-contexts {{.KUBE_CONTEXT}} >/dev/null 2>&1 || echo "WARN: kube context {{.KUBE_CONTEXT}} not found — run: gcloud container clusters get-credentials {{.CLUSTER_NAME}} --location {{.CLUSTER_LOCATION}}"'
+      - 'kubectl config get-contexts {{.KUBE_CONTEXT}} >/dev/null 2>&1 || echo "WARN: kube context {{.KUBE_CONTEXT}} not found — run: task ebpf:get-credentials"'
+
+  get-credentials:
+    desc: Fetch kubeconfig credentials for the cluster (writes the kubectl context)
+    cmds:
+      - gcloud container clusters get-credentials {{.CLUSTER_NAME_LIVE}} --zone={{.CLUSTER_LOCATION}} --project={{.PROJECT_ID}}
 
   provision-cluster:
     desc: >
@@ -61,9 +92,9 @@ tasks:
       - PROJECT_ID={{.PROJECT_ID}} CLUSTER_LOCATION={{.CLUSTER_LOCATION}} CLUSTER_NAME={{.CLUSTER_NAME}} ./provision.sh
 
   delete-cluster:
-    desc: Delete GKE cluster
+    desc: Delete the standalone GKE cluster
     cmds:
-      - gcloud container clusters delete {{.CLUSTER_NAME}} --location={{.CLUSTER_LOCATION}} --quiet
+      - gcloud container clusters delete {{.CLUSTER_NAME_LIVE}} --location={{.CLUSTER_LOCATION}} --quiet
 
 
   lima-start:
@@ -112,6 +143,12 @@ tasks:
     cmds:
       - clang -O2 -g -target bpf -D__TARGET_ARCH_x86 -I./bpf -I/usr/include/x86_64-linux-gnu -I/usr/include/bpf -c ./bpf/noisy-neighbour.bpf.c -o ./bpf/noisy-neighbour.bpf.o
 
+  ensure-namespace:
+    desc: Create the ebpf-noisy-neighbour namespace if it does not already exist
+    internal: true
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace.yaml
+
   deploy-k8s:
     desc: >
       Deploy the eBPF daemonset to a standalone manually-provisioned cluster
@@ -119,18 +156,20 @@ tasks:
       Flux-pinned GitOps image). Creates the namespace if missing.
     vars:
       FULL_IMAGE_TAG: '{{.IMAGE_PATH}}:latest'
+    deps: [ensure-namespace]
     cmds:
-      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace.yaml
       - >
         IMAGE={{.FULL_IMAGE_TAG}} envsubst < k8s/daemonset-manual.yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
 
   deploy-monitoring:
     desc: Deploy PodMonitoring CRD for GKE Managed Prometheus
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/pod-monitoring.yaml
 
   deploy-node-exporter:
     desc: Deploy node-exporter DaemonSet + PodMonitoring to scrape node_cpu_seconds_total{mode="steal"} on the noisy-node pool
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/node-exporter.yaml
 
@@ -141,6 +180,7 @@ tasks:
 
   deploy-ballast:
     desc: Deploy ballast DaemonSet — pins 1 exclusive core per test node (needs static CPU Manager)
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
 
@@ -151,21 +191,25 @@ tasks:
 
   deploy-victim:
     desc: Deploy victim-api test workload to noisy-node pool
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
 
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
 
   deploy-bully-io:
     desc: "Track B: deploy bully-io disk-I/O stressor to noisy-node pool (run alone, not with bully-net)"
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-io.yaml
 
   deploy-bully-net:
     desc: "Track B: deploy bully-net network-I/O stressor to noisy-node pool (run alone, not with bully-io)"
+    deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-net.yaml
 
