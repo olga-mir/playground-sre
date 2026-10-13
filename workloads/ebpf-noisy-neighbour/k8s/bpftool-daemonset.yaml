@@ -1,3 +1,6 @@
+# Privileged debug pod so dump-runq-enqueued.sh can run `bpftool map dump`
+# against maps loaded by ebpf-ds on the same node. Installs the official
+# static bpftool release instead of compiling libbpf in the pod.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -23,21 +26,36 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: bpftool
-        image: ubuntu:latest
-        command: 
-        - "/bin/bash"
+        image: curlimages/curl:8.22.0
+        command:
+        - "/bin/sh"
         - "-c"
         - |
-          apt-get update && \
-          apt-get install -y git make gcc libelf-dev libssl-dev pkg-config && \
-          git clone --depth 1 --recurse-submodules https://github.com/libbpf/bpftool.git && \
-          cd bpftool/src && \
-          make install && \
-          cd .. && \
-          rm -rf bpftool && \
-          sleep infinity
+          set -eu
+          case "$(uname -m)" in
+            x86_64) asset=amd64 ;;
+            aarch64|arm64) asset=arm64 ;;
+            *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          ver=v7.7.0
+          file="bpftool-${ver}-${asset}.tar.gz"
+          base="https://github.com/libbpf/bpftool/releases/download/${ver}"
+          curl -fsSL -o "/tmp/${file}" "${base}/${file}"
+          curl -fsSL -o "/tmp/${file}.sha256sum" "${base}/${file}.sha256sum"
+          (cd /tmp && sha256sum -c "${file}.sha256sum")
+          tar -xzf "/tmp/${file}" -C /usr/local/bin bpftool
+          chmod 755 /usr/local/bin/bpftool
+          rm -f /tmp/bpftool-*
+          exec sleep infinity
+        readinessProbe:
+          exec:
+            command: ["/usr/local/bin/bpftool", "version"]
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          failureThreshold: 24
         securityContext:
           privileged: true
+          runAsUser: 0
         volumeMounts:
           - name: sys
             mountPath: /sys

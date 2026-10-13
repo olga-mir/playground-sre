@@ -9,7 +9,7 @@
 #   runq_histograms : struct{cgroup_id, prev_cgroup_id, bucket} -> count (u64).
 #
 # Requires k8s/bpftool-daemonset.yaml deployed:
-#   kubectl apply -f k8s/bpftool-daemonset.yaml
+#   task ebpf:deploy-bpftool
 #
 # Env overrides: NAMESPACE (default ebpf-noisy-neighbour), NODE_SELECTOR
 # (default workload=noisy-node), KUBE_CONTEXT (default: current kube context;
@@ -31,23 +31,45 @@ kubectl() {
   fi
 }
 
+# First name from a list, or empty. `{range}` over an empty list prints nothing
+# and exits 0. `{.items[0]...}` makes kubectl exit 1, and `set -e` then aborts
+# with the raw jsonpath error before the messages below can run.
+first_name() {
+  local out
+  if ! out="$("$@")"; then
+    echo "kubectl failed: $*" >&2
+    exit 1
+  fi
+  printf '%s\n' "${out%%$'\n'*}"
+}
+
 echo "Finding a node matching '${NODE_SELECTOR}'..."
-node="$(kubectl get nodes -l "${NODE_SELECTOR}" -o jsonpath='{.items[0].metadata.name}')"
+node="$(first_name kubectl get nodes -l "${NODE_SELECTOR}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
 if [[ -z "${node}" ]]; then
   echo "No node matches selector '${NODE_SELECTOR}'." >&2
   exit 1
 fi
 echo "Test node: ${node}"
 
-pod="$(kubectl get pods -n "${NAMESPACE}" -l name=bpftool \
+pod="$(first_name kubectl get pods -n "${NAMESPACE}" -l name=bpftool \
   --field-selector "spec.nodeName=${node}" \
-  -o jsonpath='{.items[0].metadata.name}')"
+  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
 if [[ -z "${pod}" ]]; then
   echo "No bpftool pod on ${node} in namespace ${NAMESPACE}." >&2
-  echo "Deploy it with: kubectl apply -f k8s/bpftool-daemonset.yaml" >&2
+  if kubectl get daemonset -n "${NAMESPACE}" bpftool-ds >/dev/null 2>&1; then
+    echo "DaemonSet bpftool-ds exists but has no pod on ${node} yet:" >&2
+    kubectl get pods -n "${NAMESPACE}" -l name=bpftool -o wide >&2 || true
+  else
+    echo "Deploy it with: task ebpf:deploy-bpftool" >&2
+  fi
   exit 1
 fi
 echo "bpftool pod: ${pod}"
+
+if ! kubectl exec -n "${NAMESPACE}" "${pod}" -- bpftool version >/dev/null 2>&1; then
+  echo "bpftool is not ready in ${pod} yet (the container installs it on startup). Wait and retry." >&2
+  exit 1
+fi
 echo
 
 # Entry count first — the single number that tells you whether the map is

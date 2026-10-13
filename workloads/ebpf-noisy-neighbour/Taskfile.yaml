@@ -196,6 +196,12 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
 
+  deploy-bpftool:
+    desc: Deploy the bpftool DaemonSet used by dump-runq-enqueued (privileged, noisy-node pool)
+    deps: [ensure-namespace]
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bpftool-daemonset.yaml
+
   dump-runq-enqueued:
     desc: Dump runq_enqueued + runq_histograms BPF maps from the bpftool pod on the test node (manual leak check, investigation section 4)
     cmds:

@@ -89,6 +89,7 @@ task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
 task ebpf:deploy-victim                # optional: test workload to observe from the bully
 
 task ebpf:list-pod-cgroups             # map pods -> eBPF cgroup labels
+task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump-runq-enqueued
 task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF maps (needs bpftool-daemonset)
 
 task ebpf:delete-cluster
