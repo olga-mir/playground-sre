@@ -84,19 +84,19 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_psi_stall_seconds_total - cpu node scope",
+          "title": "ebpf_psi_stall_seconds_total - cpu, node and container cgroups",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": false
+              "showLegend": true
             },
             "dataSets": [
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "",
+                "legendTemplate": "node ${metric.labels.kind}",
                 "measures": [],
                 "minAlignmentPeriod": "60s",
                 "plotType": "LINE",
@@ -114,7 +114,33 @@
                       ],
                       "perSeriesAligner": "ALIGN_RATE"
                     },
-                    "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" (metric.label.\"scope\"=\"node\" OR metric.label.\"cgroup\"=monitoring.regex.full_match(\"pod/[^/]+/.+\"))"
+                    "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"scope\"=\"node\""
+                  },
+                  "unitOverride": ""
+                }
+              },
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "cgroup ${metric.labels.kind}",
+                "measures": [],
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "sort": [],
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "crossSeriesReducer": "REDUCE_MAX",
+                      "groupByFields": [
+                        "metric.label.\"kind\"",
+                        "metric.label.\"scope\""
+                      ],
+                      "perSeriesAligner": "ALIGN_RATE"
+                    },
+                    "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"cgroup\"=monitoring.regex.full_match(\"pod/[^/]+/.+\")"
                   },
                   "unitOverride": ""
                 }
