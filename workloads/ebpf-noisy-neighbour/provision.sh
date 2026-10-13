@@ -19,7 +19,10 @@ gcloud config set project "${PROJECT_ID}"
 # Create a zonal cluster. Regular-channel GKE turns NodeLocal DNS on unless
 # NodeLocalDNS=DISABLED is set. --addons replaces the addon set, so the other
 # entries keep the defaults this cluster actually uses.
-# An existing cluster is not updated; delete it first to pick up flag changes.
+# --enable-dataplane-v2 selects Cilium and does not install kube-proxy. The
+# anetd DaemonSet still has to fit on the shared core; that budget is not
+# set here. An existing cluster is not updated; delete it first to pick up
+# flag changes.
 if gcloud container clusters describe "${CLUSTER_NAME}" --zone "${CLUSTER_LOCATION}" >/dev/null 2>&1; then
   echo "Cluster ${CLUSTER_NAME} already exists in ${CLUSTER_LOCATION}, skipping create."
 else
@@ -31,6 +34,7 @@ else
       --workload-pool="${PROJECT_ID}.svc.id.goog" \
       --enable-managed-prometheus \
       --enable-ip-alias \
+      --enable-dataplane-v2 \
       --machine-type "e2-medium" \
       --disk-type="pd-standard" \
       --disk-size=50 \
