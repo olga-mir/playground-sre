@@ -51,11 +51,9 @@ vars:
 
   # Every kubectl call is pinned to an explicit context so tasks never act on
   # whatever `kubectl config current-context` happens to be. Defaults to the
-  # context name `gcloud container clusters get-credentials` writes for this
-  # cluster (derived from the live cluster name + location); override by
-  # exporting KUBE_CONTEXT.
+  # current kubectl context; override by exporting KUBE_CONTEXT.
   KUBE_CONTEXT:
-    sh: echo "${KUBE_CONTEXT:-gke_{{.PROJECT_ID}}_{{.CLUSTER_LOCATION}}_{{.CLUSTER_NAME_LIVE}}}"
+    sh: echo "${KUBE_CONTEXT:-$(kubectl config current-context)}"
 
   GIT_COMMIT:
     sh: git rev-parse --short HEAD

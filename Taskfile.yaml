@@ -30,7 +30,7 @@ tasks:
         --create-namespace
         --context {{.KUBE_CONTEXT}}
       - kubectl --context {{.KUBE_CONTEXT}} -n kguardian rollout status deployment/kguardian-broker --timeout=300s
-      - echo "kguardian installed. Run: kubectl -n kguardian port-forward svc/kguardian-broker 3000:3000"
+      - sh: echo "kguardian installed. Run: kubectl -n kguardian port-forward svc/kguardian-broker 3000:3000"
 
   kguardian:uninstall:
     desc: Uninstall kguardian from the cluster
