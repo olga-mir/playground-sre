@@ -149,11 +149,23 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace.yaml
 
+  deploy-stack:
+    desc: >
+      Deploy the full eBPF experiment stack: daemonset, monitoring, ballast,
+      victim, and bully workloads. Uses the image built by local-build-image.
+    cmds:
+      - task: deploy-k8s
+      - task: deploy-monitoring
+      - task: deploy-ballast
+      - task: deploy-victim
+      - task: deploy-bully
+
   deploy-k8s:
     desc: >
       Deploy the eBPF daemonset to a standalone manually-provisioned cluster
       (uses the image built by local-build-image/lima-build-image, not the
       Flux-pinned GitOps image). Creates the namespace if missing.
+    internal: true
     vars:
       FULL_IMAGE_TAG: '{{.IMAGE_PATH}}:latest'
     deps: [ensure-namespace]
@@ -163,6 +175,7 @@ tasks:
 
   deploy-monitoring:
     desc: Deploy PodMonitoring CRD for GKE Managed Prometheus
+    internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/pod-monitoring.yaml
@@ -180,6 +193,7 @@ tasks:
 
   deploy-ballast:
     desc: Deploy ballast DaemonSet — pins 1 exclusive core per test node (needs static CPU Manager)
+    internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
@@ -191,12 +205,14 @@ tasks:
 
   deploy-victim:
     desc: Deploy victim-api test workload to noisy-node pool
+    internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
 
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
+    internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
