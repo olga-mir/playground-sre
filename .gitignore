@@ -11,3 +11,4 @@ server
 
 .setup-env
 .claude/settings.local.json
+stash/
