@@ -3,7 +3,9 @@ set -euo pipefail
 
 # This script provisions a standalone GKE cluster with a tainted nodepool,
 # for manual testing outside of the GitOps (Flux) setup in the `playground`
-# repo. Requires environment variables: PROJECT_ID, CLUSTER_LOCATION, CLUSTER_NAME
+# repo. Requires environment variables: PROJECT_ID, CLUSTER_LOCATION, CLUSTER_NAME.
+# Safe to re-run: an existing cluster or test-pool is left as-is, then
+# credentials are refreshed and the metrics-server CPU limit is patched again.
 
 PROJECT_ID="${PROJECT_ID:?'PROJECT_ID environment variable is required'}"
 CLUSTER_LOCATION="${CLUSTER_LOCATION:?'CLUSTER_LOCATION environment variable is required (a zone, e.g. australia-southeast1-a)'}"
@@ -14,38 +16,47 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Configuring gcloud for project ${PROJECT_ID}..."
 gcloud config set project "${PROJECT_ID}"
 
-echo "Creating GKE cluster ${CLUSTER_NAME} in ${CLUSTER_LOCATION}..."
 # Create a zonal cluster. Regular-channel GKE turns NodeLocal DNS on unless
 # NodeLocalDNS=DISABLED is set. --addons replaces the addon set, so the other
 # entries keep the defaults this cluster actually uses.
-gcloud container clusters create "${CLUSTER_NAME}" \
-    --zone "${CLUSTER_LOCATION}" \
-    --num-nodes 1 \
-    --release-channel "regular" \
-    --workload-pool="${PROJECT_ID}.svc.id.goog" \
-    --enable-managed-prometheus \
-    --enable-ip-alias \
-    --machine-type "e2-medium" \
-    --disk-type="pd-standard" \
-    --disk-size=50 \
-    --addons=HttpLoadBalancing=ENABLED,HorizontalPodAutoscaling=ENABLED,GcePersistentDiskCsiDriver=ENABLED,NodeLocalDNS=DISABLED
+# An existing cluster is not updated; delete it first to pick up flag changes.
+if gcloud container clusters describe "${CLUSTER_NAME}" --zone "${CLUSTER_LOCATION}" >/dev/null 2>&1; then
+  echo "Cluster ${CLUSTER_NAME} already exists in ${CLUSTER_LOCATION}, skipping create."
+else
+  echo "Creating GKE cluster ${CLUSTER_NAME} in ${CLUSTER_LOCATION}..."
+  gcloud container clusters create "${CLUSTER_NAME}" \
+      --zone "${CLUSTER_LOCATION}" \
+      --num-nodes 1 \
+      --release-channel "regular" \
+      --workload-pool="${PROJECT_ID}.svc.id.goog" \
+      --enable-managed-prometheus \
+      --enable-ip-alias \
+      --machine-type "e2-medium" \
+      --disk-type="pd-standard" \
+      --disk-size=50 \
+      --addons=HttpLoadBalancing=ENABLED,HorizontalPodAutoscaling=ENABLED,GcePersistentDiskCsiDriver=ENABLED,NodeLocalDNS=DISABLED
+fi
 
-echo "Creating tainted nodepool for testing (2 vCPU, static CPU Manager)..."
 # e2-standard-2 (2 vCPU). Taint + label so only our test workloads land here.
 # --system-config-from-file turns on kubelet cpuManagerPolicy: static, which lets
 # the ballast DaemonSet (k8s/ballast.yaml) claim one exclusive core per node and
 # confine the noisy-neighbour experiment to the remaining shared CPU.
-gcloud container node-pools create "test-pool" \
-    --cluster="${CLUSTER_NAME}" \
-    --zone="${CLUSTER_LOCATION}" \
-    --machine-type="e2-standard-2" \
-    --num-nodes=1 \
-    --node-taints="dedicated=noisy-node:NoSchedule" \
-    --node-labels="workload=noisy-node" \
-    --system-config-from-file="${SCRIPT_DIR}/gke-node-system-config.yaml" \
-    --enable-autoscaling --min-nodes=1 --max-nodes=3 \
-    --disk-type="pd-standard" \
-    --disk-size=50
+if gcloud container node-pools describe "test-pool" --cluster "${CLUSTER_NAME}" --zone "${CLUSTER_LOCATION}" >/dev/null 2>&1; then
+  echo "Node pool test-pool already exists, skipping create."
+else
+  echo "Creating tainted nodepool for testing (2 vCPU, static CPU Manager)..."
+  gcloud container node-pools create "test-pool" \
+      --cluster="${CLUSTER_NAME}" \
+      --zone="${CLUSTER_LOCATION}" \
+      --machine-type="e2-standard-2" \
+      --num-nodes=1 \
+      --node-taints="dedicated=noisy-node:NoSchedule" \
+      --node-labels="workload=noisy-node" \
+      --system-config-from-file="${SCRIPT_DIR}/gke-node-system-config.yaml" \
+      --enable-autoscaling --min-nodes=1 --max-nodes=3 \
+      --disk-type="pd-standard" \
+      --disk-size=50
+fi
 
 echo "Fetching cluster credentials..."
 gcloud container clusters get-credentials "${CLUSTER_NAME}" --zone="${CLUSTER_LOCATION}"
@@ -100,4 +111,4 @@ EOF
 echo "metrics-server (${deploy}) CPU limit set to ${METRICS_SERVER_CPU_LIMIT}."
 
 echo "Cluster ${CLUSTER_NAME} provisioned successfully."
-echo "Next: task ebpf:local-build-image && task ebpf:deploy-k8s"
+echo "Next: task ebpf:local-build-image && task ebpf:deploy-stack"

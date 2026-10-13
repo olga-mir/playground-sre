@@ -157,7 +157,7 @@ tasks:
       - task: deploy-monitoring
       - task: deploy-ballast
       - task: deploy-victim
-      - task: deploy-pbftool
+      - task: deploy-bpftool
 
   deploy-k8s:
     desc: >
@@ -219,7 +219,6 @@ tasks:
 
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
-    internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
