@@ -8,8 +8,32 @@ includes:
     taskfile: ./workloads/ebpf-noisy-neighbour/Taskfile.yaml
     dir: ./workloads/ebpf-noisy-neighbour
 
+vars:
+  KUBE_CONTEXT:
+    sh: kubectl config current-context
+
 tasks:
   help:
     desc: List all tasks across all workloads
     cmds:
       - task --list
+
+  kguardian:install:
+    desc: >
+      Install kguardian (eBPF-based Kubernetes security policy generator) to the
+      cluster. Deploys the Controller DaemonSet, Broker service, PostgreSQL, and
+      Web UI.
+    cmds:
+      - >
+        helm install kguardian oci://ghcr.io/kguardian-dev/charts/kguardian
+        --namespace kguardian
+        --create-namespace
+        --context {{.KUBE_CONTEXT}}
+      - kubectl --context {{.KUBE_CONTEXT}} -n kguardian rollout status deployment/kguardian-broker --timeout=300s
+      - echo "kguardian installed. Run: kubectl -n kguardian port-forward svc/kguardian-broker 3000:3000"
+
+  kguardian:uninstall:
+    desc: Uninstall kguardian from the cluster
+    cmds:
+      - helm uninstall kguardian --namespace kguardian --context {{.KUBE_CONTEXT}}
+      - kubectl --context {{.KUBE_CONTEXT}} delete namespace kguardian --ignore-not-found
