@@ -47,5 +47,53 @@ gcloud container node-pools create "test-pool" \
 echo "Fetching cluster credentials..."
 gcloud container clusters get-credentials "${CLUSTER_NAME}" --zone="${CLUSTER_LOCATION}"
 
+# GKE has no clusters-create flag for metrics-server resources. It sets CPU
+# request=limit around 40m, so kubelet scrapes burst over the CFS quota and
+# the container is throttled while the node is idle. Patch the limit after
+# the addon Deployment exists. EnsureExists does not stick here: GKE writes
+# addonmanager.kubernetes.io/mode=Reconcile back within seconds, and leaves
+# the CPU limit in place. A GKE upgrade that recreates metrics-server-v<version>
+# drops this patch. kube-system/metrics-server-config is not consulted: the
+# pod ships without the addon-resizer nanny that used to read baseCPU.
+KUBE_CONTEXT="gke_${PROJECT_ID}_${CLUSTER_LOCATION}_${CLUSTER_NAME}"
+METRICS_SERVER_CPU_LIMIT="200m"
+echo "Raising metrics-server CPU limit to ${METRICS_SERVER_CPU_LIMIT}..."
+deadline=$((SECONDS + 180))
+deploy=""
+while (( SECONDS < deadline )); do
+  mapfile -t deploys < <(kubectl --context "${KUBE_CONTEXT}" -n kube-system get deploy -l k8s-app=metrics-server -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
+  deploy="${deploys[0]:-}"
+  if [[ -n "${deploy}" ]]; then
+    break
+  fi
+  sleep 5
+done
+if [[ -z "${deploy}" ]]; then
+  echo "metrics-server deployment did not appear within 3 minutes." >&2
+  exit 1
+fi
+kubectl --context "${KUBE_CONTEXT}" -n kube-system patch deployment "${deploy}" --type strategic --patch "$(cat <<EOF
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "metrics-server",
+            "resources": {
+              "limits": {
+                "cpu": "${METRICS_SERVER_CPU_LIMIT}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+EOF
+)"
+echo "metrics-server (${deploy}) CPU limit set to ${METRICS_SERVER_CPU_LIMIT}."
+
 echo "Cluster ${CLUSTER_NAME} provisioned successfully."
 echo "Next: task ebpf:local-build-image && task ebpf:deploy-k8s"
