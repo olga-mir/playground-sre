@@ -29,7 +29,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket[1m])) by (le, cgroup)) / 1e6",
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (le, cgroup)) / 1e6",
                   "unitOverride": ""
                 }
               }
@@ -66,7 +66,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup!=\"\"}[5m])) by (cgroup, prev_cgroup)\n  unless \ncgroup == prev_cgroup",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[5m])) by (cgroup, prev_cgroup)\n  unless \ncgroup == prev_cgroup",
                   "unitOverride": ""
                 }
               }
@@ -114,7 +114,7 @@
                       ],
                       "perSeriesAligner": "ALIGN_RATE"
                     },
-                    "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\""
+                    "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" (metric.label.\"scope\"=\"node\" OR metric.label.\"cgroup\"=monitoring.regex.full_match(\"pod/[^/]+/.+\"))"
                   },
                   "unitOverride": ""
                 }
@@ -145,7 +145,7 @@
                 "plotType": "LINE",
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\"}"
+                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\", cgroup=~\"pod/[^/]+/.+\"}"
                 }
               }
             ],
@@ -157,11 +157,11 @@
         }
       },
       {
-        "yPos": 32,
+        "yPos": 128,
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_runq_enqueued_stale_entries > 0",
+          "title": "ebpf_runq_enqueued_stale_entries (map health)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -206,9 +206,8 @@
       },
       {
         "yPos": 32,
-        "xPos": 24,
         "height": 16,
-        "width": 24,
+        "width": 48,
         "widget": {
           "title": "ebpf_runq_latency_max_nanoseconds / 1e6",
           "id": "",
@@ -658,6 +657,36 @@
             "thresholds": [],
             "yAxis": {
               "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 128,
+        "xPos": 24,
+        "height": 16,
+        "width": 24,
+        "widget": {
+          "title": "ebpf_events_total ingest rate",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": false
+            },
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum(rate(ebpf_events_total{pod=~\".+\"}[1m]))"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "events/s",
               "scale": "LINEAR"
             }
           }
