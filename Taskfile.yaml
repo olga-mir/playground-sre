@@ -28,12 +28,11 @@ tasks:
         helm install kguardian oci://ghcr.io/kguardian-dev/charts/kguardian
         --namespace kguardian
         --create-namespace
-        --context {{.KUBE_CONTEXT}}
       - kubectl --context {{.KUBE_CONTEXT}} -n kguardian rollout status deployment/kguardian-broker --timeout=300s
       - sh: echo "kguardian installed. Run: kubectl -n kguardian port-forward svc/kguardian-broker 3000:3000"
 
   kguardian:uninstall:
     desc: Uninstall kguardian from the cluster
     cmds:
-      - helm uninstall kguardian --namespace kguardian --context {{.KUBE_CONTEXT}}
+      - helm uninstall kguardian --namespace kguardian
       - kubectl --context {{.KUBE_CONTEXT}} delete namespace kguardian --ignore-not-found
