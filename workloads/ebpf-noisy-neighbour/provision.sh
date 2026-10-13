@@ -70,7 +70,14 @@ gcloud container clusters get-credentials "${CLUSTER_NAME}" --zone="${CLUSTER_LO
 # drops this patch. kube-system/metrics-server-config is not consulted: the
 # pod ships without the addon-resizer nanny that used to read baseCPU.
 KUBE_CONTEXT="gke_${PROJECT_ID}_${CLUSTER_LOCATION}_${CLUSTER_NAME}"
-METRICS_SERVER_CPU_LIMIT="200m"
+
+# Curated cAdvisor collection omits kubelet PSI counters. The addon
+# ClusterNodeMonitoring is Reconcile-managed, so this separate object keeps
+# the six container_pressure_* series. Safe to re-apply.
+echo "Applying PSI metrics collector..."
+kubectl --context "${KUBE_CONTEXT}" apply -f "${SCRIPT_DIR}/k8s/psi-collector.yaml"
+
+METRICS_SERVER_CPU_LIMIT="500m"
 echo "Raising metrics-server CPU limit to ${METRICS_SERVER_CPU_LIMIT}..."
 # /bin/bash on macOS is 3.2 and has no mapfile.
 deadline=$((SECONDS + 180))

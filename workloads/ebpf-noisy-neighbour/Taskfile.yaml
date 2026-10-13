@@ -173,11 +173,12 @@ tasks:
         IMAGE={{.FULL_IMAGE_TAG}} envsubst < k8s/daemonset-manual.yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
 
   deploy-monitoring:
-    desc: Deploy PodMonitoring CRD for GKE Managed Prometheus
+    desc: Deploy GMP scrapes for the eBPF pods and kubelet PSI counters
     internal: true
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/pod-monitoring.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/psi-collector.yaml
 
   deploy-node-exporter:
     internal: true

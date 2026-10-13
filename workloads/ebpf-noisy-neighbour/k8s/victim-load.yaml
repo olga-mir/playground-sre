@@ -2,9 +2,11 @@
 # http-echo does no work until a request arrives, so this is what makes the
 # victim runnable and able to be starved by bully-hog.
 #
-# Scheduled onto the untainted default pool. The noisy-node pool is tainted
-# dedicated=noisy-node:NoSchedule and this pod does not tolerate it, so the
-# generator does not compete for the shared core the experiment is measuring.
+# Pinned to the default node pool. test-pool is the experiment node
+# (workload=noisy-node); this pod must not land there. The default pool is an
+# e2-medium with ~940m allocatable, and GKE system pods already request ~931m,
+# so the CPU request has to stay under the leftover few millicores. The limit
+# is what lets fortio actually run.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,21 +22,13 @@ spec:
       labels:
         app: victim-load
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: workload
-                operator: NotIn
-                values:
-                - noisy-node
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: fortio
         image: fortio/fortio:latest
         # -qps 0 = as fast as possible, -t 0 = until the pod is deleted.
-        # 32 connections is enough to keep a 1-core-capped http-echo busy;
-        # the generator itself is capped so it cannot fill the default node.
+        # 32 connections is enough to keep a 1-core-capped http-echo busy.
         args:
         - load
         - -qps
@@ -50,5 +44,4 @@ spec:
             cpu: "100m"
             memory: "64Mi"
           limits:
-            cpu: "1"
             memory: "128Mi"
