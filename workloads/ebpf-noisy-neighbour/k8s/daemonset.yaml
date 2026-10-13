@@ -30,6 +30,12 @@ spec:
         env:
         - name: PSI_PROC_PATH
           value: /host/proc/pressure
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
         securityContext:
           privileged: true # Required for eBPF operations
         volumeMounts:
