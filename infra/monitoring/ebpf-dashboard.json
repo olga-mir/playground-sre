@@ -478,6 +478,190 @@
             }
           }
         }
+      },
+      {
+        "yPos": 96,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI some (waiting) — CPU — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 96,
+        "xPos": 16,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI some (waiting) — memory — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 96,
+        "xPos": 32,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI some (waiting) — I/O — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 112,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI full (stalled) — CPU — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 112,
+        "xPos": 16,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI full (stalled) — memory — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 112,
+        "xPos": 32,
+        "height": 16,
+        "width": 16,
+        "widget": {
+          "title": "k8s PSI full (stalled) — I/O — bully & victim",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.pod}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)"
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "percent",
+              "scale": "LINEAR"
+            }
+          }
+        }
       }
     ]
   }
