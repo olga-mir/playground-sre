@@ -153,10 +153,11 @@ tasks:
       victim, and bully workloads. Uses the image built by local-build-image.
     cmds:
       - task: deploy-k8s
+      - task: deploy-node-exporter
       - task: deploy-monitoring
       - task: deploy-ballast
       - task: deploy-victim
-      - task: deploy-bully
+      - task: deploy-pbftool
 
   deploy-k8s:
     desc: >
@@ -179,6 +180,7 @@ tasks:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/pod-monitoring.yaml
 
   deploy-node-exporter:
+    internal: true
     desc: Deploy node-exporter DaemonSet + PodMonitoring to scrape node_cpu_seconds_total{mode="steal"} on the noisy-node pool
     deps: [ensure-namespace]
     cmds:
@@ -197,6 +199,7 @@ tasks:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
 
   deploy-bpftool:
+    internal: true
     desc: Deploy the bpftool DaemonSet used by dump-runq-enqueued (privileged, noisy-node pool)
     deps: [ensure-namespace]
     cmds:

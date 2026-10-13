@@ -61,11 +61,12 @@ gcloud container clusters get-credentials "${CLUSTER_NAME}" --zone="${CLUSTER_LO
 KUBE_CONTEXT="gke_${PROJECT_ID}_${CLUSTER_LOCATION}_${CLUSTER_NAME}"
 METRICS_SERVER_CPU_LIMIT="200m"
 echo "Raising metrics-server CPU limit to ${METRICS_SERVER_CPU_LIMIT}..."
+# /bin/bash on macOS is 3.2 and has no mapfile.
 deadline=$((SECONDS + 180))
 deploy=""
 while (( SECONDS < deadline )); do
-  mapfile -t deploys < <(kubectl --context "${KUBE_CONTEXT}" -n kube-system get deploy -l k8s-app=metrics-server -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
-  deploy="${deploys[0]:-}"
+  names="$(kubectl --context "${KUBE_CONTEXT}" -n kube-system get deploy -l k8s-app=metrics-server -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+  deploy="${names%%$'\n'*}"
   if [[ -n "${deploy}" ]]; then
     break
   fi
