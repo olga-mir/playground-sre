@@ -15,7 +15,9 @@ echo "Configuring gcloud for project ${PROJECT_ID}..."
 gcloud config set project "${PROJECT_ID}"
 
 echo "Creating GKE cluster ${CLUSTER_NAME} in ${CLUSTER_LOCATION}..."
-# Create a zonal cluster.
+# Create a zonal cluster. Regular-channel GKE turns NodeLocal DNS on unless
+# NodeLocalDNS=DISABLED is set. --addons replaces the addon set, so the other
+# entries keep the defaults this cluster actually uses.
 gcloud container clusters create "${CLUSTER_NAME}" \
     --zone "${CLUSTER_LOCATION}" \
     --num-nodes 1 \
@@ -25,7 +27,8 @@ gcloud container clusters create "${CLUSTER_NAME}" \
     --enable-ip-alias \
     --machine-type "e2-medium" \
     --disk-type="pd-standard" \
-    --disk-size=50
+    --disk-size=50 \
+    --addons=HttpLoadBalancing=ENABLED,HorizontalPodAutoscaling=ENABLED,GcePersistentDiskCsiDriver=ENABLED,NodeLocalDNS=DISABLED
 
 echo "Creating tainted nodepool for testing (2 vCPU, static CPU Manager)..."
 # e2-standard-2 (2 vCPU). Taint + label so only our test workloads land here.
