@@ -1,0 +1,54 @@
+# Continuous HTTP load against victim-api (hashicorp/http-echo on :5678).
+# http-echo does no work until a request arrives, so this is what makes the
+# victim runnable and able to be starved by bully-hog.
+#
+# Scheduled onto the untainted default pool. The noisy-node pool is tainted
+# dedicated=noisy-node:NoSchedule and this pod does not tolerate it, so the
+# generator does not compete for the shared core the experiment is measuring.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victim-load
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: victim-load
+  template:
+    metadata:
+      labels:
+        app: victim-load
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: workload
+                operator: NotIn
+                values:
+                - noisy-node
+      containers:
+      - name: fortio
+        image: fortio/fortio:latest
+        # -qps 0 = as fast as possible, -t 0 = until the pod is deleted.
+        # 32 connections is enough to keep a 1-core-capped http-echo busy;
+        # the generator itself is capped so it cannot fill the default node.
+        args:
+        - load
+        - -qps
+        - "0"
+        - -c
+        - "32"
+        - -t
+        - "0"
+        - -allow-initial-errors
+        - http://victim-api.default.svc:5678/
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "1"
+            memory: "128Mi"

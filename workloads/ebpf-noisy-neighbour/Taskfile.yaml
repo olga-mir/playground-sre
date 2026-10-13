@@ -217,6 +217,12 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
 
+  deploy-victim-load:
+    desc: Keep victim-api busy with flat-out fortio load from the default node pool
+    deps: [deploy-victim]
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-load.yaml
+
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
     deps: [ensure-namespace]

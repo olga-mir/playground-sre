@@ -87,6 +87,7 @@ task ebpf:deploy-node-exporter         # optional: node-exporter for steal-time 
 task ebpf:deploy-ballast               # optional: pin 1 exclusive core per test node
 task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
 task ebpf:deploy-victim                # optional: test workload to observe from the bully
+task ebpf:deploy-victim-load           # optional: fortio against victim-api, keeps it busy
 
 task ebpf:list-pod-cgroups             # map pods -> eBPF cgroup labels
 task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump-runq-enqueued
