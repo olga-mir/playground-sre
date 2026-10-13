@@ -134,33 +134,23 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_psi_pressure_ratio",
-          "id": "",
+          "title": "ebpf_psi_pressure_ratio - cpu/some/avg10",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR",
-              "showLegend": false
+              "mode": "COLOR"
             },
             "dataSets": [
               {
-                "breakdowns": [],
-                "dimensions": [],
-                "legendTemplate": "",
-                "measures": [],
                 "plotType": "LINE",
-                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "outputFullDuration": false,
-                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\"}",
-                  "unitOverride": ""
+                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\"}"
                 }
               }
             ],
             "thresholds": [],
             "yAxis": {
-              "label": "",
               "scale": "LINEAR"
             }
           }
@@ -407,33 +397,83 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "",
-          "id": "",
+          "title": "ebpf_runq_latency_nanoseconds_count - victim",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR",
-              "showLegend": false
+              "mode": "COLOR"
             },
             "dataSets": [
               {
-                "breakdowns": [],
-                "dimensions": [],
                 "legendTemplate": "prev_cgroup:${labels.prev_cgroup} - cgroup: ${labels.cgroup}",
-                "measures": [],
                 "plotType": "LINE",
-                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\".*pod/.*/c6e1d2a1\"}[1m])) by (cgroup, prev_cgroup, ${__groupby})",
-                  "unitOverride": ""
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\".*pod/b8d80bcf/.*\"}[1m])) by (cgroup, prev_cgroup, ${__groupby})"
                 }
               }
             ],
             "thresholds": [],
             "yAxis": {
-              "label": "",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 80,
+        "xPos": 24,
+        "height": 16,
+        "width": 24,
+        "widget": {
+          "title": "CPU request/usage victim/bully",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR"
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "usage -${resource.labels.pod_name}",
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "crossSeriesReducer": "REDUCE_MAX",
+                      "groupByFields": [
+                        "resource.label.\"pod_name\""
+                      ],
+                      "perSeriesAligner": "ALIGN_RATE"
+                    },
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\""
+                  }
+                }
+              },
+              {
+                "legendTemplate": "request -${resource.labels.pod_name}",
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "crossSeriesReducer": "REDUCE_MAX",
+                      "groupByFields": [
+                        "resource.label.\"pod_name\""
+                      ],
+                      "perSeriesAligner": "ALIGN_MAX"
+                    },
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/request_cores\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\""
+                  }
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
               "scale": "LINEAR"
             }
           }
