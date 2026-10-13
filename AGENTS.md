@@ -90,6 +90,7 @@ task ebpf:deploy-victim                # optional: test workload to observe from
 task ebpf:deploy-victim-load           # optional: fortio against victim-api, keeps it busy
 
 task ebpf:list-pod-cgroups             # map pods -> eBPF cgroup labels
+task ebpf:list-cpu-pinning             # containers on the noisy-node, grouped by pinned CPU
 task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump-runq-enqueued
 task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF maps (needs bpftool-daemonset)
 

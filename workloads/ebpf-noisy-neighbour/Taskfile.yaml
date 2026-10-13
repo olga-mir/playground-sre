@@ -192,6 +192,11 @@ tasks:
     cmds:
       - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./list-cgroup-labels.sh
 
+  list-cpu-pinning:
+    desc: List containers on the noisy-node pool by the CPU the kubelet pinned them to
+    cmds:
+      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./list-cpu-pinning.sh
+
   deploy-ballast:
     desc: Deploy ballast DaemonSet — pins 1 exclusive core per test node (needs static CPU Manager)
     internal: true

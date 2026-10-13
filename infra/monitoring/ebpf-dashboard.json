@@ -366,7 +366,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "(\n  sum(rate(container_cpu_cfs_throttled_periods_total{container!=\"\",\"container\"!=\"metrics-server\"}[5m])) by (pod, container,  ${__groupby})\n  /\n  sum(rate(container_cpu_cfs_periods_total{container!=\"\",\"container\"!=\"metrics-server\"}[5m])) by (pod, container, ${__groupby})\n) * 100",
+                  "prometheusQuery": "(\n  sum(rate(container_cpu_cfs_throttled_periods_total{node=~\".*test-pool.*\",container!=\"\",\"container\"!=\"metrics-server\"}[5m])) by (pod, container,  ${__groupby})\n  /\n  sum(rate(container_cpu_cfs_periods_total{node=~\".*test-pool.*\",container!=\"\",\"container\"!=\"metrics-server\"}[5m])) by (pod, container, ${__groupby})\n) * 100",
                   "unitOverride": ""
                 }
               }
@@ -404,7 +404,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(container_cpu_cfs_throttled_periods_total{container!=\"\"}[5m])) by (pod, container)",
+                  "prometheusQuery": "sum(rate(container_cpu_cfs_throttled_periods_total{node=~\".*test-pool.*\",container!=\"\"}[5m])) by (pod, container)",
                   "unitOverride": ""
                 }
               }
@@ -473,7 +473,7 @@
                       ],
                       "perSeriesAligner": "ALIGN_RATE"
                     },
-                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\""
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
                   }
                 }
               },
@@ -492,7 +492,7 @@
                       ],
                       "perSeriesAligner": "ALIGN_MAX"
                     },
-                    "filter": "metric.type=\"kubernetes.io/container/cpu/request_cores\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\""
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/request_cores\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
                   }
                 }
               }
