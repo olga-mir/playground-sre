@@ -10,9 +10,7 @@ vars:
   REGION:
     sh: echo "${REGION:?'REGION environment variable is required'}"
 
-  # The canonical cluster name that provision.sh will create going forward.
-  # If you have an existing cluster with a different name, export CLUSTER_NAME
-  # to match it (e.g. export CLUSTER_NAME=ebfp-experiment).
+  # Name provision-cluster creates. Live tasks use CLUSTER_NAME_LIVE.
   CLUSTER_NAME: "{{.SERVICE_NAME}}-cluster"
 
   # GKE cluster location — a zone (e.g. australia-southeast1-a) for a zonal
@@ -33,21 +31,23 @@ vars:
       fi;
       echo "${loc:-{{.REGION}}}"
 
-  # Actual cluster name resolved from the live cluster (handles clusters
-  # provisioned with a different name than CLUSTER_NAME). Falls back to
-  # CLUSTER_NAME when no cluster exists yet (pre-provisioning).
+  # Name of the cluster that exists in PROJECT_ID. The canonical name wins
+  # when it exists; otherwise the only cluster in the project. Do not
+  # short-circuit on $CLUSTER_NAME: Task exports that var into this shell, so
+  # the check always succeeded and an export (for example ebfp-experiment)
+  # made delete target a cluster that does not exist.
   CLUSTER_NAME_LIVE:
     sh: >
-      if [ -n "${CLUSTER_NAME:-}" ]; then echo "$CLUSTER_NAME"; exit 0; fi;
       name=$(gcloud container clusters list
       --project '{{.PROJECT_ID}}' --filter 'name={{.CLUSTER_NAME}}'
-      --format 'value(name)' 2>/dev/null | head -1);
-      if [ -z "$name" ]; then
-        name=$(gcloud container clusters list
-        --project '{{.PROJECT_ID}}'
-        --format 'value(name)' 2>/dev/null | head -1);
-      fi;
-      echo "${name:-{{.CLUSTER_NAME}}}"
+      --format 'value(name)' --limit=1 2>/dev/null | head -1);
+      if [ -n "$name" ]; then echo "$name"; exit 0; fi;
+      names=$(gcloud container clusters list
+      --project '{{.PROJECT_ID}}'
+      --format 'value(name)' --limit=2 2>/dev/null);
+      count=$(printf '%s\n' "$names" | grep -c . || true);
+      if [ "$count" -eq 1 ]; then printf '%s\n' "$names"; exit 0; fi;
+      echo "{{.CLUSTER_NAME}}"
 
   # Every kubectl call is pinned to an explicit context so tasks never act on
   # whatever `kubectl config current-context` happens to be. Defaults to the
@@ -92,7 +92,7 @@ tasks:
   delete-cluster:
     desc: Delete the standalone GKE cluster
     cmds:
-      - gcloud container clusters delete {{.CLUSTER_NAME_LIVE}} --location={{.CLUSTER_LOCATION}} --quiet
+      - gcloud container clusters delete {{.CLUSTER_NAME_LIVE}} --location={{.CLUSTER_LOCATION}} --project={{.PROJECT_ID}} --quiet
 
 
   lima-start:

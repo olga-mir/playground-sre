@@ -97,7 +97,7 @@ task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF 
 task ebpf:delete-cluster
 ```
 
-`CLUSTER_NAME`, `CLUSTER_LOCATION`, and `KUBE_CONTEXT` are all auto-detected from the live GKE cluster via `gcloud`. You only need to export them explicitly when provisioning a fresh cluster (no live cluster to detect from yet) or to override the detected values.
+`delete-cluster` and `get-credentials` take the cluster name from the live GKE cluster (`experiment-ebpf-cluster` when that cluster exists). `CLUSTER_LOCATION` and `KUBE_CONTEXT` are auto-detected the same way. Export `CLUSTER_LOCATION` when provisioning a fresh cluster (no live cluster yet for it to detect) or to override the detected zone. An exported `CLUSTER_NAME` is not used: Task injects that variable into later shells, and a stale value would make delete target the wrong cluster.
 
 `k8s/daemonset-manual.yaml` is the standalone counterpart to `k8s/daemonset.yaml` — same pod spec, but templated with `${IMAGE}` instead of the Flux-pinned Docker Hub image, and deliberately excluded from `kustomization.yaml` so it never leaks into GitOps.
 
