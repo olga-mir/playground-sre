@@ -12,6 +12,7 @@ CLUSTER_LOCATION="${CLUSTER_LOCATION:?'CLUSTER_LOCATION environment variable is 
 CLUSTER_NAME="${CLUSTER_NAME:?'CLUSTER_NAME environment variable is required'}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKLOAD_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo "Configuring gcloud for project ${PROJECT_ID}..."
 gcloud config set project "${PROJECT_ID}"
@@ -56,7 +57,7 @@ else
       --num-nodes=1 \
       --node-taints="dedicated=noisy-node:NoSchedule" \
       --node-labels="workload=noisy-node" \
-      --system-config-from-file="${SCRIPT_DIR}/gke-node-system-config.yaml" \
+      --system-config-from-file="${WORKLOAD_DIR}/gke-node-system-config.yaml" \
       --enable-autoscaling --min-nodes=1 --max-nodes=3 \
       --disk-type="pd-standard" \
       --disk-size=50
@@ -79,7 +80,7 @@ KUBE_CONTEXT="gke_${PROJECT_ID}_${CLUSTER_LOCATION}_${CLUSTER_NAME}"
 # ClusterNodeMonitoring is Reconcile-managed, so this separate object keeps
 # the six container_pressure_* series. Safe to re-apply.
 echo "Applying PSI metrics collector..."
-kubectl --context "${KUBE_CONTEXT}" apply -f "${SCRIPT_DIR}/k8s/psi-collector.yaml"
+kubectl --context "${KUBE_CONTEXT}" apply -f "${WORKLOAD_DIR}/k8s/psi-collector.yaml"
 
 METRICS_SERVER_CPU_LIMIT="500m"
 echo "Raising metrics-server CPU limit to ${METRICS_SERVER_CPU_LIMIT}..."

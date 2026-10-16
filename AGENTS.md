@@ -53,6 +53,11 @@ workloads/ebpf-noisy-neighbour/
 │   ├── node-exporter.yaml
 │   ├── bpftool-daemonset.yaml
 │   └── kustomization.yaml
+├── scripts/
+│   ├── dump-runq-enqueued.sh
+│   ├── list-cgroup-labels.sh
+│   ├── list-cpu-pinning.sh
+│   └── provision-stand-alone-cluster.sh
 ├── main.go
 ├── debug.go
 ├── psi.go
@@ -89,10 +94,11 @@ task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
 task ebpf:deploy-victim                # optional: test workload to observe from the bully
 task ebpf:deploy-victim-load           # optional: fortio against victim-api, keeps it busy
 
-task ebpf:list-pod-cgroups             # map pods -> eBPF cgroup labels
-task ebpf:list-cpu-pinning             # containers on the noisy-node, grouped by pinned CPU
-task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump-runq-enqueued
-task ebpf:dump-runq-enqueued           # dump runq_enqueued/runq_histograms BPF maps (needs bpftool-daemonset)
+task ebpf:debug:cgroups                # map pods -> eBPF cgroup labels (alias: ebpf:list-pod-cgroups)
+task ebpf:debug:list_cpus              # containers on the noisy-node, grouped by pinned CPU (alias: ebpf:list-cpu-pinning)
+task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump_runqueue
+task ebpf:debug:dump_runqueue          # dump runq_enqueued/runq_histograms BPF maps (alias: ebpf:dump-runq-enqueued)
+task ebpf:debug:bpftool                # optional: interactive shell in bpftool pod
 
 task ebpf:delete-cluster
 ```

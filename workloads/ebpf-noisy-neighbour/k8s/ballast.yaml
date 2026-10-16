@@ -10,7 +10,7 @@
 # idle `pause` container is enough -- it just parks the core.
 #
 # Requires test-pool nodes running kubelet cpuManagerPolicy: static
-# (see gke-node-system-config.yaml, wired into provision.sh). WITHOUT that
+# (see gke-node-system-config.yaml, wired into scripts/provision-stand-alone-cluster.sh). WITHOUT that
 # policy this is just a harmless idle pod that reserves 1 CPU for scheduling
 # but pins nothing.
 #

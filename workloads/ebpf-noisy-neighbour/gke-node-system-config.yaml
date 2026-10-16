@@ -1,6 +1,6 @@
 # Kubelet system configuration for the GKE "test-pool" node pool.
 #
-# Applied at node-pool creation in provision.sh via:
+# Applied at node-pool creation in scripts/provision-stand-alone-cluster.sh via:
 #   gcloud container node-pools create ... \
 #     --system-config-from-file=gke-node-system-config.yaml
 #

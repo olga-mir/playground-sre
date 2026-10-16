@@ -9,7 +9,7 @@ resources:
   - bpftool-daemonset.yaml
   - ballast.yaml
   # psi-collector.yaml is a cluster-scoped ClusterNodeMonitoring for the manual
-  # experiment cluster. It is applied by provision.sh, not by this Kustomization,
+  # experiment cluster. It is applied by scripts/provision-stand-alone-cluster.sh, not by this Kustomization,
   # so it does not land on the GitOps apps-dev cluster.
   # Experiment-variant workloads (bully-*, victim-api, victim-load) are deployed ad-hoc, not via
   # GitOps -- you pick one noisy-neighbour scenario per run and tear it down after.

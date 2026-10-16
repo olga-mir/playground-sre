@@ -87,7 +87,7 @@ tasks:
       provisioning there's no live cluster yet for it to auto-detect from, so
       it would otherwise fall back to the REGION var, which --zone rejects.
     cmds:
-      - PROJECT_ID={{.PROJECT_ID}} CLUSTER_LOCATION={{.CLUSTER_LOCATION}} CLUSTER_NAME={{.CLUSTER_NAME}} ./provision.sh
+      - PROJECT_ID={{.PROJECT_ID}} CLUSTER_LOCATION={{.CLUSTER_LOCATION}} CLUSTER_NAME={{.CLUSTER_NAME}} ./scripts/provision-stand-alone-cluster.sh
 
   delete-cluster:
     desc: Delete the standalone GKE cluster
@@ -187,16 +187,6 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/node-exporter.yaml
 
-  list-pod-cgroups:
-    desc: List pods grouped by node with their eBPF metric cgroup label (pod/UID/CID)
-    cmds:
-      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./list-cgroup-labels.sh
-
-  list-cpu-pinning:
-    desc: List containers on the noisy-node pool by the CPU the kubelet pinned them to
-    cmds:
-      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./list-cpu-pinning.sh
-
   deploy-ballast:
     desc: Deploy ballast DaemonSet — pins 1 exclusive core per test node (needs static CPU Manager)
     internal: true
@@ -205,16 +195,40 @@ tasks:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
 
   deploy-bpftool:
-    internal: true
-    desc: Deploy the bpftool DaemonSet used by dump-runq-enqueued (privileged, noisy-node pool)
+    aliases: [debug:deploy-bpftool, debug:deploy_bpftool]
+    desc: Deploy the bpftool DaemonSet used by dump_runqueue and debug:bpftool (privileged, noisy-node pool)
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bpftool-daemonset.yaml
 
-  dump-runq-enqueued:
-    desc: Dump runq_enqueued + runq_histograms BPF maps from the bpftool pod on the test node (manual leak check, investigation section 4)
+  debug:dump_runqueue:
+    aliases: [debug:dump-runqueue, debug:dump-runq-enqueued, dump-runq-enqueued, dump_runqueue]
+    desc: Dump runq_enqueued + runq_histograms BPF maps from the bpftool pod on the test node (manual leak check)
     cmds:
-      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./dump-runq-enqueued.sh
+      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/dump-runq-enqueued.sh
+
+  debug:list_cpus:
+    aliases: [debug:list-cpus, debug:list-cpu-pinning, list-cpu-pinning, list_cpus]
+    desc: List containers on the noisy-node pool by the CPU the kubelet pinned them to
+    cmds:
+      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cpu-pinning.sh
+
+  debug:cgroups:
+    aliases: [debug:list_cgroups, debug:list-cgroups, debug:list-pod-cgroups, list-pod-cgroups]
+    desc: List pods grouped by node with their eBPF metric cgroup label (pod/UID/CID)
+    cmds:
+      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cgroup-labels.sh
+
+  debug:bpftool:
+    aliases: [debug:bpftool-shell, debug:bpftool_shell]
+    desc: Open an interactive shell inside the bpftool debug pod on the test node
+    cmds:
+      - |
+        node="$(kubectl --context {{.KUBE_CONTEXT}} get nodes -l workload=noisy-node -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -n1)"
+        if [ -z "$node" ]; then echo "No node matches selector workload=noisy-node" >&2; exit 1; fi
+        pod="$(kubectl --context {{.KUBE_CONTEXT}} -n ebpf-noisy-neighbour get pods -l name=bpftool --field-selector "spec.nodeName=${node}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -n1)"
+        if [ -z "$pod" ]; then echo "No bpftool pod found on ${node}. Deploy with: task ebpf:deploy-bpftool" >&2; exit 1; fi
+        kubectl --context {{.KUBE_CONTEXT}} -n ebpf-noisy-neighbour exec -it "${pod}" -- /bin/sh
 
   deploy-victim:
     desc: Deploy victim-api test workload to noisy-node pool

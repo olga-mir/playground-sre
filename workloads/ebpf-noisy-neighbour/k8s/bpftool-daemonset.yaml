@@ -1,4 +1,4 @@
-# Privileged debug pod so dump-runq-enqueued.sh can run `bpftool map dump`
+# Privileged debug pod so scripts/dump-runq-enqueued.sh can run `bpftool map dump`
 # against maps loaded by ebpf-ds on the same node. Installs the official
 # static bpftool release instead of compiling libbpf in the pod.
 apiVersion: apps/v1

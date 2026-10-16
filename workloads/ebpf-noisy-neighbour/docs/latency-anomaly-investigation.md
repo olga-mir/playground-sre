@@ -120,7 +120,7 @@ collisions, or hook `sched_process_exit` to clean up orphaned entries proactivel
   **`ebpf_runq_enqueued_stale_entries`** (entries older than `staleAgeThreshold = 10s`),
   computing age against `CLOCK_MONOTONIC` — the same clock as `bpf_ktime_get_ns`. It also
   logs a one-line summary each tick, visible in `kubectl logs`.
-- `dump-runq-enqueued.sh` + **`task dump-runq-enqueued`** — shells into the `bpftool`
+- `scripts/dump-runq-enqueued.sh` + **`task ebpf:debug:dump_runqueue`** (alias: `dump-runq-enqueued`) — shells into the `bpftool`
   DaemonSet pod on the test node and runs `bpftool map dump name runq_enqueued` /
   `runq_histograms` for manual inspection.
 - **What "leak confirmed" looks like:** `ebpf_runq_enqueued_entries` climbs steadily
