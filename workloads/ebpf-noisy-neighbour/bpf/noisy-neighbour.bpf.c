@@ -10,6 +10,7 @@
 #define MAX_TASK_ENTRIES 20000
 #define MAX_HIST_ENTRIES 50000
 #define MIN_RUNQ_LAT_NS 1000000 // 1 ms threshold to record significant delays
+#define MAX_PLAUSIBLE_RUNQ_LAT_NS 2000000000ULL // 2s upper bound to discard stale/recycled PIDs
 #define NUM_BUCKETS 24
 
 typedef __u32 u32;
@@ -44,6 +45,12 @@ struct {
     __uint(value_size, sizeof(u64));
 } runq_histograms SEC(".maps");
 
+// Netflix note on map selection:
+// "BPF_MAP_TYPE_LRU_HASH maps are 40–50 nanoseconds slower per operation than
+// regular hash maps. Due to space concerns from PID churn, we initially used them
+// for enqueued timestamps. Ultimately, we settled on BPF_MAP_TYPE_HASH with an
+// increased size to mitigate this risk."
+// https://netflixtechblog.com/noisy-neighbor-detection-with-ebpf-64b1f4b3bbdd
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, MAX_TASK_ENTRIES);
@@ -119,6 +126,12 @@ int tp_sched_switch(__u64 *ctx)
 
     // Filter out minor scheduling delays to focus on heavy-hitter noisy neighbor interference
     if (runq_lat < MIN_RUNQ_LAT_NS) {
+        return 0;
+    }
+
+    // Filter out implausible delays (> 2s) resulting from stale timestamps or recycled PIDs
+    // so they do not poison the histogram overflow bucket or the max gauge.
+    if (runq_lat > MAX_PLAUSIBLE_RUNQ_LAT_NS) {
         return 0;
     }
 

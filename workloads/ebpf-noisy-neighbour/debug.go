@@ -66,7 +66,7 @@ var (
 	// peak latency the BPF program has seen since boot, unclamped.
 	runqLatencyMaxNanoseconds = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "ebpf_runq_latency_max_nanoseconds",
-		Help: "Largest run-queue latency (ns) the BPF program has recorded since boot, read from the runq_lat_max array map. Captures the true magnitude that the histogram overflow bucket clamps.",
+		Help: "Largest run-queue latency (ns) recorded in the last poll interval, read from the runq_lat_max array map. Captures the true magnitude that the histogram overflow bucket clamps.",
 	})
 )
 
@@ -152,6 +152,11 @@ func watchRunqEnqueued(objs *bpfObjects) {
 		} else {
 			runqLatencyMaxNanoseconds.Set(float64(maxLatNs))
 			maxLatMsg = " raw_max=" + time.Duration(maxLatNs).String()
+			// Reset to 0 so the gauge reflects the windowed max for the next poll interval.
+			zero := uint64(0)
+			if err := objs.RunqLatMax.Put(uint32(0), zero); err != nil {
+				log.Printf("runq_lat_max probe: reset failed: %v", err)
+			}
 		}
 
 		log.Printf("runq_enqueued probe: entries=%d max_age=%.1fs stale(>%s)=%d%s",
