@@ -1,0 +1,24 @@
+# Kubelet PSI counters (container_pressure_*_seconds_total) are emitted on GKE
+# 1.35+ with KubeletPSI, but they are not in the curated cAdvisor package.
+# gmp-kubelet-cadvisor is an addonmanager Reconcile object, so its allowlist
+# cannot be extended. This collector keeps only the six PSI series.
+#
+# Scoped to the noisy-node pool. Bully and victim pods are scheduled there.
+apiVersion: monitoring.googleapis.com/v1
+kind: ClusterNodeMonitoring
+metadata:
+  name: psi-collector
+spec:
+  selector:
+    matchLabels:
+      workload: noisy-node
+  endpoints:
+  - path: /metrics/cadvisor
+    scheme: https
+    interval: 30s
+    tls:
+      insecureSkipVerify: true
+    metricRelabeling:
+    - action: keep
+      sourceLabels: [__name__]
+      regex: container_pressure_(cpu|memory|io)_(waiting|stalled)_seconds_total
