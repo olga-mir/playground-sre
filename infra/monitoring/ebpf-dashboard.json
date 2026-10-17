@@ -25,7 +25,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_runq_latency_nanoseconds_bucket, p99, by cgroup",
+          "title": "ebpf_runq_latency_nanoseconds_bucket, p99, by cgroup (waiter)",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
@@ -33,7 +33,7 @@
             },
             "dataSets": [
               {
-                "legendTemplate": "${labels.cgroup}",
+                "legendTemplate": "waiter: ${labels.cgroup}",
                 "plotType": "LINE",
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
@@ -53,7 +53,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_runq_latency_nanoseconds_count by cgroup, prev_cgroup",
+          "title": "ebpf_runq_latency_nanoseconds_count by cgroup (waiter), prev_cgroup (ran before)",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
@@ -65,7 +65,8 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup"
-                }
+                },
+                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}"
               }
             ],
             "thresholds": [],
@@ -92,7 +93,6 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "node ${metric.labels.kind}",
                 "measures": [],
                 "minAlignmentPeriod": "60s",
                 "plotType": "LINE",
@@ -118,7 +118,6 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "cgroup ${metric.labels.kind}",
                 "measures": [],
                 "minAlignmentPeriod": "60s",
                 "plotType": "LINE",
@@ -325,7 +324,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(container_cpu_cfs_throttled_periods_total{node=~\".*test-pool.*\",container!=\"\"}[5m])) by (pod, container)",
+                  "prometheusQuery": "sum(rate(container_cpu_cfs_throttled_periods_total{node=~\".*test-pool.*\",container!=\"\"}[5m])) by (pod, container, ${__groupby})",
                   "unitOverride": ""
                 }
               }
@@ -343,7 +342,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_runq_latency_nanoseconds_count - victim",
+          "title": "ebpf_runq_latency_nanoseconds_count - victim (waiter) behind prev_cgroup",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -355,7 +354,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "prev_cgroup:${labels.prev_cgroup} - cgroup: ${labels.cgroup}",
+                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -508,7 +507,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_cpu_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -546,7 +545,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_memory_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -584,7 +583,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_io_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -621,7 +620,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_cpu_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -659,7 +658,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_memory_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -697,7 +696,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod, ${__groupby}) (\n  rate(container_pressure_io_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -715,7 +714,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "VICTIM runq latency p99 (ms) - cgroup = ${victim_cgroup}",
+          "title": "VICTIM runq latency p99 / p95 (ms) - waiter cgroup = ${victim_cgroup}",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
@@ -723,11 +722,19 @@
             },
             "dataSets": [
               {
-                "legendTemplate": "${labels.cgroup}",
+                "legendTemplate": "p99 waiter: ${labels.cgroup}",
                 "plotType": "LINE",
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
+                }
+              },
+              {
+                "legendTemplate": "p95 waiter: ${labels.cgroup}",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
                 }
               }
             ],
@@ -769,28 +776,28 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "behind BULLY: ${labels.cgroup}",
+                "legendTemplate": "waiter ${labels.cgroup} ← BULLY",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup=~\"${bully_cgroup}\"}[1m])) by (cgroup)",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup=~\"${bully_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               },
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "behind other: ${labels.cgroup}",
+                "legendTemplate": "waiter ${labels.cgroup} ← other",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup!~\"${bully_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup)",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup!~\"${bully_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               }
