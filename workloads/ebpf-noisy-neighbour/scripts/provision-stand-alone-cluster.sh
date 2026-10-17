@@ -47,6 +47,8 @@ fi
 # --system-config-from-file turns on kubelet cpuManagerPolicy: static, which lets
 # the ballast DaemonSet (k8s/ballast.yaml) claim one exclusive core per node and
 # confine the noisy-neighbour experiment to the remaining shared CPU.
+# Autoscaling stays off: a second node would let bully/victim land on different
+# nodes, defeating the point of a shared-core contention experiment.
 if gcloud container node-pools describe "test-pool" --cluster "${CLUSTER_NAME}" --zone "${CLUSTER_LOCATION}" >/dev/null 2>&1; then
   echo "Node pool test-pool already exists, skipping create."
 else
@@ -59,7 +61,7 @@ else
       --node-taints="dedicated=noisy-node:NoSchedule" \
       --node-labels="workload=noisy-node" \
       --system-config-from-file="${WORKLOAD_DIR}/gke-node-system-config.yaml" \
-      --enable-autoscaling --min-nodes=1 --max-nodes=3 \
+      --no-enable-autoscaling \
       --disk-type="pd-standard" \
       --disk-size=50
 fi
