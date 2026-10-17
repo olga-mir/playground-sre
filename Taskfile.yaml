@@ -31,9 +31,9 @@ tasks:
       - kubectl --context {{.KUBE_CONTEXT}} -n kguardian rollout status deployment/kguardian-broker --timeout=300s
 
   kguardian:port-forward:
-    desc: Port-forward the kguardian broker UI to http://localhost:3000
+    desc: Port-forward the kguardian UI to http://localhost:3000
     cmds:
-      - kubectl --context {{.KUBE_CONTEXT}} -n kguardian port-forward svc/kguardian-broker 3000:3000
+      - kubectl --context {{.KUBE_CONTEXT}} -n kguardian port-forward svc/kguardian-frontend 3000:5173
 
   kguardian:uninstall:
     desc: Uninstall kguardian from the cluster
