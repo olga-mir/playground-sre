@@ -67,9 +67,9 @@ workloads/ebpf-noisy-neighbour/
 
 **Module:** `github.com/olga-mir/playground-sre/ebpf-noisy-neighbour`
 **Image:** `index.docker.io/olmigar/experiment-ebpf`
-**Namespace:** `ebpf-noisy-neighbour`
+**Namespace:** `ebpf-noisy-neighbour` (collector DaemonSet), `noisy-test` (test workloads)
 
-Experiment-time workloads (bully, ballast, victim) are in `k8s/` but deployed ad-hoc with `task ebpf:deploy-bully` — not managed by GitOps Kustomization.
+Experiment-time workloads (bully, victim) are in `k8s/` and deployed ad-hoc to the `noisy-test` namespace with `task ebpf:deploy-bully` — not managed by GitOps Kustomization. Ballast is managed in `ebpf-noisy-neighbour`.
 
 #### Manual testing (no GitOps)
 
@@ -90,9 +90,10 @@ task ebpf:deploy-k8s                   # applies namespace.yaml + k8s/daemonset-
 task ebpf:deploy-monitoring            # optional: PodMonitoring (namespace auto-created if missing)
 task ebpf:deploy-node-exporter         # optional: node-exporter for steal-time metrics
 task ebpf:deploy-ballast               # optional: pin 1 exclusive core per test node
-task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net
-task ebpf:deploy-victim                # optional: test workload to observe from the bully
+task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net (deploys to noisy-test)
+task ebpf:deploy-victim                # optional: test workload to observe from the bully (deploys to noisy-test)
 task ebpf:deploy-victim-load           # optional: fortio against victim-api, keeps it busy
+task ebpf:delete-test-workloads        # optional: tear down noisy-test namespace and workloads
 
 task ebpf:debug:cgroups                # map pods -> eBPF cgroup labels (alias: ebpf:list-pod-cgroups)
 task ebpf:debug:list_cpus              # containers on the noisy-node, grouped by pinned CPU (alias: ebpf:list-cpu-pinning)

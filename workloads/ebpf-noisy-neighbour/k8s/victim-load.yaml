@@ -11,7 +11,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: victim-load
-  namespace: default
+  namespace: noisy-test
 spec:
   replicas: 1
   selector:
@@ -38,7 +38,7 @@ spec:
         - -t
         - "0"
         - -allow-initial-errors
-        - http://victim-api.default.svc:5678/
+        - http://victim-api.noisy-test.svc:5678/
         resources:
           requests:
             cpu: "100m"

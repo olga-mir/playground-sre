@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: cpu-stressor
-  namespace: default
+  namespace: noisy-test
   labels:
     app: cpu-stressor
 spec:

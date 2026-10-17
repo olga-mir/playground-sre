@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bully-hog
-  namespace: default
+  namespace: noisy-test
 spec:
   replicas: 1
   selector:

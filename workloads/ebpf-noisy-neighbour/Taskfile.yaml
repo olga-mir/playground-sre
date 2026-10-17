@@ -147,6 +147,13 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace.yaml
 
+  ensure-test-namespace:
+    desc: Create the noisy-test namespace if it does not already exist
+    internal: true
+    aliases: [ensure-noisy-test-namespace]
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/namespace-noisy-test.yaml
+
   deploy-stack:
     desc: >
       Deploy the full eBPF experiment stack: daemonset, monitoring, ballast,
@@ -232,34 +239,39 @@ tasks:
 
   deploy-victim:
     desc: Deploy victim-api test workload to noisy-node pool
-    internal: true
-    deps: [ensure-namespace]
+    deps: [ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
 
   deploy-victim-load:
     desc: Keep victim-api busy with flat-out fortio load from the default node pool
-    deps: [deploy-victim]
+    deps: [deploy-victim, ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-load.yaml
 
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
-    deps: [ensure-namespace]
+    deps: [ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
 
   deploy-bully-io:
     desc: "Track B: deploy bully-io disk-I/O stressor to noisy-node pool (run alone, not with bully-net)"
-    deps: [ensure-namespace]
+    deps: [ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-io.yaml
 
   deploy-bully-net:
     desc: "Track B: deploy bully-net network-I/O stressor to noisy-node pool (run alone, not with bully-io)"
-    deps: [ensure-namespace]
+    deps: [ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-net.yaml
+
+  delete-test-workloads:
+    aliases: [delete-test-namespace]
+    desc: Delete the noisy-test namespace and all test workloads inside it
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} delete namespace noisy-test --ignore-not-found
 
   help:
     desc: Show list of available tasks and their descriptions
