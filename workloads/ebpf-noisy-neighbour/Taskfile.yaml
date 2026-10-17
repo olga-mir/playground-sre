@@ -272,7 +272,7 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-api --timeout=180s
-      - task: debug:list_cpus
+      - task: debug:list_cgroups_labels
 
   deploy-victim-load:
     desc: >
@@ -282,7 +282,7 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-load.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-load --timeout=180s
-      - task: debug:list_cpus
+      - task: debug:list_cgroups_labels
 
   deploy-bully:
     desc: >
@@ -292,7 +292,7 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-hog --timeout=180s
-      - task: debug:list_cpus
+      - task: debug:list_cgroups_labels
 
   deploy-bully-io:
     desc: >
@@ -302,7 +302,7 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-io.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-io --timeout=180s
-      - task: debug:list_cpus
+      - task: debug:list_cgroups_labels
 
   deploy-bully-net:
     desc: >
@@ -312,7 +312,7 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-net.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-net --timeout=180s
-      - task: debug:list_cpus
+      - task: debug:list_cgroups_labels
 
   delete-test-workloads:
     aliases: [delete-test-namespace]
