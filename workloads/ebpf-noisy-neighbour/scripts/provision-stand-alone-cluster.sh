@@ -39,6 +39,7 @@ else
       --machine-type "e2-medium" \
       --disk-type="pd-standard" \
       --disk-size=50 \
+      --enable-autoscaling --min-nodes=1 --max-nodes=5 \
       --addons=HttpLoadBalancing=ENABLED,HorizontalPodAutoscaling=ENABLED,GcePersistentDiskCsiDriver=ENABLED,NodeLocalDNS=DISABLED
 fi
 
