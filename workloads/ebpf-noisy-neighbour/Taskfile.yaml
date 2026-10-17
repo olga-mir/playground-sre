@@ -164,8 +164,7 @@ tasks:
     desc: >
       Deploy the full eBPF experiment stack: daemonset, monitoring, ballast,
       victim, and bully workloads. Uses the image built by local-build-image.
-    requires:
-      vars: [DIR]
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     cmds:
       - task: deploy-k8s
       - task: deploy-node-exporter
@@ -266,50 +265,50 @@ tasks:
         kubectl --context {{.KUBE_CONTEXT}} -n ebpf-noisy-neighbour exec -it "${pod}" -- /bin/sh
 
   deploy-victim:
-    desc: Deploy victim-api test workload to noisy-node pool
+    desc: >
+      Deploy victim-api test workload to noisy-node pool.
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     deps: [ensure-test-namespace]
-    requires:
-      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-api --timeout=180s
       - task: debug:list_cpus
 
   deploy-victim-load:
-    desc: Keep victim-api busy with flat-out fortio load from the default node pool
+    desc: >
+      Keep victim-api busy with flat-out fortio load from the default node pool.
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     deps: [deploy-victim, ensure-test-namespace]
-    requires:
-      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-load.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-load --timeout=180s
       - task: debug:list_cpus
 
   deploy-bully:
-    desc: Deploy bully-hog CPU stressor to noisy-node pool
+    desc: >
+      Deploy bully-hog CPU stressor to noisy-node pool.
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     deps: [ensure-test-namespace]
-    requires:
-      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-hog --timeout=180s
       - task: debug:list_cpus
 
   deploy-bully-io:
-    desc: "Track B: deploy bully-io disk-I/O stressor to noisy-node pool (run alone, not with bully-net)"
+    desc: >
+      Track B: deploy bully-io disk-I/O stressor to noisy-node pool (run alone, not with bully-net).
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     deps: [ensure-test-namespace]
-    requires:
-      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-io.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-io --timeout=180s
       - task: debug:list_cpus
 
   deploy-bully-net:
-    desc: "Track B: deploy bully-net network-I/O stressor to noisy-node pool (run alone, not with bully-io)"
+    desc: >
+      Track B: deploy bully-net network-I/O stressor to noisy-node pool (run alone, not with bully-io).
+      DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     deps: [ensure-test-namespace]
-    requires:
-      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-net.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-net --timeout=180s
