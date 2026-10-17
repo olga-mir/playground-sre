@@ -716,11 +716,12 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "VICTIM runq latency p99 / p95 (ms) - waiter cgroup = ${victim_cgroup}",
+          "title": "VICTIM runq latency p99 / p95 (ms, waits >1ms) - waiter = victim",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR"
+              "mode": "COLOR",
+              "showLegend": true
             },
             "dataSets": [
               {
@@ -766,7 +767,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "VICTIM waits by who ran before it: bully vs everyone else (events/s)",
+          "title": "VICTIM waits by who ran before it: bully vs self vs everyone else (events/s)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -792,14 +793,28 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} ← other",
+                "legendTemplate": "waiter ${labels.cgroup} ← self",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup!~\"${bully_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup, ${__groupby})",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup=~\"${victim_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
+                  "unitOverride": ""
+                }
+              },
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "waiter ${labels.cgroup} ← other (system/host)",
+                "measures": [],
+                "plotType": "LINE",
+                "sort": [],
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup!~\"${bully_cgroup}\", prev_cgroup!~\"${victim_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               }
