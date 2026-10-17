@@ -300,3 +300,9 @@ of `root` / `system.slice/*` was at the dashboard/query layer, not in the collec
 Widening the dashboard's `prev_cgroup` filter (or querying Prometheus directly) is
 sufficient to see those series — no collector change and no new data collection required;
 scrapes from any run with this collector already contain them.
+
+---
+
+## 5. Kernel baseline note: EEVDF active on Linux 6.12+
+
+For the GKE cluster (`experiment-ebpf-cluster` on COS Linux 6.12.105+), the kernel runs Peter Zijlstra's **EEVDF** scheduler (merged in Linux 6.6, replacing CFS core fair scheduling). Kernel symbols `pick_eevdf` and `entity_eligible` are confirmed active. See [`eevdf-scheduler-evidence.md`](file:///Users/olga/repos/playground-sre/workloads/ebpf-noisy-neighbour/docs/eevdf-scheduler-evidence.md) for full symbol dumps, sysctl checks, and an analysis of why EEVDF does not prevent run-queue starvation or replace the need for eBPF attribution.

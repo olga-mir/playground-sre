@@ -429,7 +429,7 @@
                       ],
                       "perSeriesAligner": "ALIGN_RATE"
                     },
-                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"noisy-test\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
                   },
                   "unitOverride": ""
                 }
@@ -454,7 +454,7 @@
                       ],
                       "perSeriesAligner": "ALIGN_MAX"
                     },
-                    "filter": "metric.type=\"kubernetes.io/container/cpu/request_cores\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"noisy-test\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/request_cores\" resource.type=\"k8s_container\" resource.label.\"namespace_name\"=\"default\" metadata.system_labels.\"node_name\"=monitoring.regex.full_match(\".*test-pool.*\")"
                   },
                   "unitOverride": ""
                 }
@@ -527,7 +527,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -565,7 +565,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -603,7 +603,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_waiting_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_waiting_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -640,7 +640,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_cpu_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -678,7 +678,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_memory_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
@@ -716,7 +716,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_stalled_seconds_total{namespace=\"noisy-test\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
+                  "prometheusQuery": "100 * sum by (pod) (\n  rate(container_pressure_io_stalled_seconds_total{namespace=\"default\", pod=~\"bully-.*|victim-.*\", container!=\"\", container!=\"POD\"}[1m])\n)",
                   "unitOverride": ""
                 }
               }
