@@ -90,19 +90,21 @@ task ebpf:deploy-k8s                   # applies namespace.yaml + k8s/daemonset-
 task ebpf:deploy-monitoring            # optional: PodMonitoring (namespace auto-created if missing)
 task ebpf:deploy-node-exporter         # optional: node-exporter for steal-time metrics
 task ebpf:deploy-ballast               # optional: pin 1 exclusive core per test node
-task ebpf:deploy-bully                 # or deploy-bully-io / deploy-bully-net (deploys to noisy-test)
-task ebpf:deploy-victim                # optional: test workload to observe from the bully (deploys to noisy-test)
-task ebpf:deploy-victim-load           # optional: fortio against victim-api, keeps it busy
+task ebpf:deploy-bully DIR=stash       # or deploy-bully-io / deploy-bully-net (deploys to noisy-test)
+task ebpf:deploy-victim DIR=stash      # optional: test workload to observe from the bully (deploys to noisy-test)
+task ebpf:deploy-victim-load DIR=stash # optional: fortio against victim-api, keeps it busy
 task ebpf:delete-test-workloads        # optional: tear down noisy-test namespace and workloads
 
 task ebpf:debug:cgroups                # map pods -> eBPF cgroup labels (alias: ebpf:list-pod-cgroups)
-task ebpf:debug:list_cpus              # containers on the noisy-node, grouped by pinned CPU (alias: ebpf:list-cpu-pinning)
+task ebpf:debug:list_cpus DIR=stash    # containers on the noisy-node, grouped by pinned CPU; saved to DIR/<date>-list-cpu-pinning.txt (alias: ebpf:list-cpu-pinning)
 task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump_runqueue
 task ebpf:debug:dump_runqueue          # dump runq_enqueued/runq_histograms BPF maps (alias: ebpf:dump-runq-enqueued)
 task ebpf:debug:bpftool                # optional: interactive shell in bpftool pod
 
 task ebpf:delete-cluster
 ```
+
+Every task that deploys pods into `noisy-test` (`deploy-victim`, `deploy-victim-load`, `deploy-bully*`, `deploy-stack`) requires `DIR`: after the rollout completes it snapshots CPU pinning via `debug:list_cpus`.
 
 `delete-cluster` and `get-credentials` take the cluster name from the live GKE cluster (`experiment-ebpf-cluster` when that cluster exists). `CLUSTER_LOCATION` and `KUBE_CONTEXT` are auto-detected the same way. Export `CLUSTER_LOCATION` when provisioning a fresh cluster (no live cluster yet for it to detect) or to override the detected zone. An exported `CLUSTER_NAME` is not used: Task injects that variable into later shells, and a stale value would make delete target the wrong cluster.
 

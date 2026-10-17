@@ -158,6 +158,8 @@ tasks:
     desc: >
       Deploy the full eBPF experiment stack: daemonset, monitoring, ballast,
       victim, and bully workloads. Uses the image built by local-build-image.
+    requires:
+      vars: [DIR]
     cmds:
       - task: deploy-k8s
       - task: deploy-node-exporter
@@ -216,9 +218,20 @@ tasks:
 
   debug:list_cpus:
     aliases: [debug:list-cpus, debug:list-cpu-pinning, list-cpu-pinning, list_cpus]
-    desc: List containers on the noisy-node pool by the CPU the kubelet pinned them to
+    desc: >
+      List containers on the noisy-node pool by the CPU the kubelet pinned them
+      to. Prints the result and saves it to
+      DIR/<YYYY.MM.DD-HH.MM.SS>-list-cpu-pinning.txt (DIR is required, created
+      if missing), e.g. `task ebpf:debug:list_cpus DIR=stash`.
+    requires:
+      vars: [DIR]
     cmds:
-      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cpu-pinning.sh
+      - |
+        mkdir -p "{{.DIR}}"
+        out="{{.DIR}}/$(date +%Y.%m.%d-%H.%M.%S)-list-cpu-pinning.txt"
+        KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cpu-pinning.sh > "$out"
+        cat "$out"
+        echo "Saved to $out"
 
   debug:cgroups:
     aliases: [debug:list_cgroups, debug:list-cgroups, debug:list-pod-cgroups, list-pod-cgroups]
@@ -240,32 +253,52 @@ tasks:
   deploy-victim:
     desc: Deploy victim-api test workload to noisy-node pool
     deps: [ensure-test-namespace]
+    requires:
+      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-api --timeout=180s
+      - task: debug:list_cpus
 
   deploy-victim-load:
     desc: Keep victim-api busy with flat-out fortio load from the default node pool
     deps: [deploy-victim, ensure-test-namespace]
+    requires:
+      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-load.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-load --timeout=180s
+      - task: debug:list_cpus
 
   deploy-bully:
     desc: Deploy bully-hog CPU stressor to noisy-node pool
     deps: [ensure-test-namespace]
+    requires:
+      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-hog.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-hog --timeout=180s
+      - task: debug:list_cpus
 
   deploy-bully-io:
     desc: "Track B: deploy bully-io disk-I/O stressor to noisy-node pool (run alone, not with bully-net)"
     deps: [ensure-test-namespace]
+    requires:
+      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-io.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-io --timeout=180s
+      - task: debug:list_cpus
 
   deploy-bully-net:
     desc: "Track B: deploy bully-net network-I/O stressor to noisy-node pool (run alone, not with bully-io)"
     deps: [ensure-test-namespace]
+    requires:
+      vars: [DIR]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/bully-net.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/bully-net --timeout=180s
+      - task: debug:list_cpus
 
   delete-test-workloads:
     aliases: [delete-test-namespace]
