@@ -24,6 +24,23 @@ import (
 const (
 	cgroupRoot = "/sys/fs/cgroup"
 	numBuckets = 24
+
+	// cgroupRefreshInterval is how often the cgroup tree is re-walked. A lookup
+	// miss also kicks a refresh (at most one per cgroupRefreshMinGap).
+	cgroupRefreshInterval = 10 * time.Second
+	cgroupRefreshMinGap   = time.Second
+
+	// deadCgroupRetention is how long a deleted cgroup keeps its last-known label
+	// (so its counters stay under the same series instead of being relabeled
+	// "unresolved", which shows up as a bogus rate() spike) before its BPF
+	// histogram entries are pruned.
+	deadCgroupRetention = 15 * time.Minute
+
+	// unresolvedGrace is how long an id that has never been seen in the cgroup
+	// tree is withheld from the output before it is emitted as "unresolved".
+	unresolvedGrace = 2 * time.Minute
+
+	pruneInterval = time.Minute
 )
 
 // bucketBoundsNs[b] = 1000 * 2^b nanoseconds, matching ExponentialBuckets(1000, 2, 24).
@@ -57,6 +74,9 @@ type runqCollector struct {
 	desc   *prometheus.Desc
 	objs   *bpfObjects
 	mapper *cgroupMapper
+
+	mu      sync.Mutex
+	missing map[uint64]time.Time // cgroup id -> when first seen unresolvable
 }
 
 func newRunqCollector(objs *bpfObjects, mapper *cgroupMapper) *runqCollector {
@@ -67,8 +87,78 @@ func newRunqCollector(objs *bpfObjects, mapper *cgroupMapper) *runqCollector {
 			[]string{"cgroup", "prev_cgroup"},
 			nil,
 		),
-		objs:   objs,
-		mapper: mapper,
+		objs:    objs,
+		mapper:  mapper,
+		missing: make(map[uint64]time.Time),
+	}
+}
+
+// label resolves a cgroup id for emission. Ids the mapper has never seen (a
+// cgroup created since the last walk) are withheld for unresolvedGrace while an
+// on-demand refresh runs, so a series is never emitted as "unresolved" and then
+// relabeled once resolved — that would look like a counter reset to rate().
+func (c *runqCollector) label(id uint64) (string, bool) {
+	if label, ok := c.mapper.name(id); ok {
+		return label, true
+	}
+	c.mapper.requestRefresh()
+	now := time.Now()
+	c.mu.Lock()
+	first, seen := c.missing[id]
+	if !seen {
+		first = now
+		c.missing[id] = now
+	}
+	c.mu.Unlock()
+	if now.Sub(first) < unresolvedGrace {
+		return "", false
+	}
+	return "unresolved", true
+}
+
+// prune deletes BPF histogram entries whose cgroups (either side) have been gone
+// longer than deadCgroupRetention, bounding the map and the label set. Entries
+// are deleted outright rather than relabeled, so their series just stop.
+func (c *runqCollector) prune() {
+	var (
+		key  runqHistKey
+		val  uint64
+		dead []runqHistKey
+	)
+	expired := func(id uint64) bool {
+		if age, ok := c.mapper.staleFor(id); ok {
+			return age > deadCgroupRetention
+		}
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		first, seen := c.missing[id]
+		return seen && time.Since(first) > deadCgroupRetention
+	}
+	iter := c.objs.RunqHistograms.Iterate()
+	for iter.Next(&key, &val) {
+		if expired(key.CgroupID) || expired(key.PrevCgroupID) {
+			dead = append(dead, key)
+		}
+	}
+	if err := iter.Err(); err != nil {
+		log.Printf("prune: error iterating BPF histogram map: %v", err)
+		return
+	}
+	for i := range dead {
+		if err := c.objs.RunqHistograms.Delete(&dead[i]); err != nil {
+			log.Printf("prune: delete failed: %v", err)
+		}
+	}
+	// Forget missing-markers for ids that have since resolved.
+	c.mu.Lock()
+	for id := range c.missing {
+		if _, ok := c.mapper.name(id); ok {
+			delete(c.missing, id)
+		}
+	}
+	c.mu.Unlock()
+	if len(dead) > 0 {
+		log.Printf("prune: removed %d histogram entries for cgroups gone > %s", len(dead), deadCgroupRetention)
 	}
 }
 
@@ -88,11 +178,15 @@ func (c *runqCollector) Collect(ch chan<- prometheus.Metric) {
 		if val == 0 || key.Bucket >= numBuckets {
 			continue
 		}
-		cgroup := c.mapper.name(key.CgroupID)
-		if !strings.HasPrefix(cgroup, "pod/") {
+		cgroup, ok := c.label(key.CgroupID)
+		if !ok || !strings.HasPrefix(cgroup, "pod/") {
 			continue
 		}
-		p := pair{cgroup, c.mapper.name(key.PrevCgroupID)}
+		prev, ok := c.label(key.PrevCgroupID)
+		if !ok {
+			continue
+		}
+		p := pair{cgroup, prev}
 		if grouped[p] == nil {
 			arr := bucketArr{}
 			grouped[p] = &arr
@@ -157,26 +251,53 @@ func (c *runqCollector) Collect(ch chan<- prometheus.Metric) {
 // cgroupMapper resolves kernel cgroup IDs to human-readable labels.
 // In cgroupv2 the cgroup ID equals the inode of the cgroup directory; in GKE
 // the inode is the lower 32 bits of kernfs_node.id so we try both.
+//
+// Entries are never dropped the moment a cgroup disappears: a deleted cgroup
+// keeps its last-known label (a tombstone) so counters accumulated in the BPF
+// map stay under one stable series. Tombstones are garbage-collected at twice
+// deadCgroupRetention, after runqCollector.prune has removed their BPF entries.
 type cgroupMapper struct {
 	mu    sync.RWMutex
-	byIno map[uint64]string
+	byIno map[uint64]cgroupEntry
+	kick  chan struct{}
+}
+
+type cgroupEntry struct {
+	label    string
+	lastSeen time.Time
 }
 
 func newCgroupMapper() *cgroupMapper {
-	m := &cgroupMapper{byIno: make(map[uint64]string)}
+	m := &cgroupMapper{
+		byIno: make(map[uint64]cgroupEntry),
+		kick:  make(chan struct{}, 1),
+	}
 	m.refresh()
 	go func() {
-		t := time.NewTicker(30 * time.Second)
+		t := time.NewTicker(cgroupRefreshInterval)
 		defer t.Stop()
-		for range t.C {
+		for {
+			select {
+			case <-t.C:
+			case <-m.kick:
+			}
 			m.refresh()
+			time.Sleep(cgroupRefreshMinGap) // rate-limit on-demand refreshes
 		}
 	}()
 	return m
 }
 
+// requestRefresh asks for an out-of-band refresh; it never blocks.
+func (m *cgroupMapper) requestRefresh() {
+	select {
+	case m.kick <- struct{}{}:
+	default:
+	}
+}
+
 func (m *cgroupMapper) refresh() {
-	next := make(map[uint64]string)
+	seen := make(map[uint64]string)
 	_ = filepath.WalkDir(cgroupRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return nil
@@ -189,25 +310,51 @@ func (m *cgroupMapper) refresh() {
 		if !ok {
 			return nil
 		}
-		next[st.Ino] = cgroupLabel(path)
+		seen[st.Ino] = cgroupLabel(path)
 		return nil
 	})
+	now := time.Now()
 	m.mu.Lock()
-	m.byIno = next
+	for ino, label := range seen {
+		m.byIno[ino] = cgroupEntry{label: label, lastSeen: now}
+	}
+	for ino, e := range m.byIno {
+		if now.Sub(e.lastSeen) > 2*deadCgroupRetention {
+			delete(m.byIno, ino)
+		}
+	}
 	m.mu.Unlock()
 }
 
-func (m *cgroupMapper) name(id uint64) string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if label, ok := m.byIno[id]; ok {
-		return label
+// lookup finds the entry for a cgroup id; callers must hold m.mu.
+func (m *cgroupMapper) lookup(id uint64) (cgroupEntry, bool) {
+	if e, ok := m.byIno[id]; ok {
+		return e, true
 	}
 	// kernfs_node.id packs generation in upper 32 bits; inode lives in lower 32.
-	if label, ok := m.byIno[id&0xFFFFFFFF]; ok {
-		return label
+	e, ok := m.byIno[id&0xFFFFFFFF]
+	return e, ok
+}
+
+// name returns the label for a cgroup id, including deleted cgroups still
+// within their tombstone window. ok is false if the id was never seen.
+func (m *cgroupMapper) name(id uint64) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	e, ok := m.lookup(id)
+	return e.label, ok
+}
+
+// staleFor reports how long ago the cgroup was last seen in the tree (≈0 for a
+// live cgroup, growing once it is deleted). ok is false if the id is unknown.
+func (m *cgroupMapper) staleFor(id uint64) (time.Duration, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	e, ok := m.lookup(id)
+	if !ok {
+		return 0, false
 	}
-	return "unresolved"
+	return time.Since(e.lastSeen), true
 }
 
 // cgroupLabel derives a concise Prometheus-friendly label from a cgroup path.
@@ -309,8 +456,17 @@ func main() {
 
 	mapper := newCgroupMapper()
 
-	prometheus.MustRegister(newRunqCollector(&objs, mapper))
+	runq := newRunqCollector(&objs, mapper)
+	prometheus.MustRegister(runq)
 	prometheus.MustRegister(newPSICollector(mapper))
+
+	go func() {
+		t := time.NewTicker(pruneInterval)
+		defer t.Stop()
+		for range t.C {
+			runq.prune()
+		}
+	}()
 
 	go watchRunqEnqueued(&objs) // debug.go: runq_enqueued orphan / PID-reuse leak probe
 
@@ -334,8 +490,10 @@ func main() {
 			}
 			if total > prevTotal {
 				eventsTotal.Add(float64(total - prevTotal))
-				prevTotal = total
 			}
+			// total can drop when runqCollector.prune deletes entries; rebase
+			// rather than stalling until it catches back up.
+			prevTotal = total
 		}
 	}()
 

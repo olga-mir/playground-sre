@@ -306,3 +306,44 @@ scrapes from any run with this collector already contain them.
 ## 5. Kernel baseline note: EEVDF active on Linux 6.12+
 
 For the GKE cluster (`experiment-ebpf-cluster` on COS Linux 6.12.105+), the kernel runs Peter Zijlstra's **EEVDF** scheduler (merged in Linux 6.6, replacing CFS core fair scheduling). Kernel symbols `pick_eevdf` and `entity_eligible` are confirmed active. See [`eevdf-scheduler-evidence.md`](file:///Users/olga/repos/playground-sre/workloads/ebpf-noisy-neighbour/docs/eevdf-scheduler-evidence.md) for full symbol dumps, sysctl checks, and an analysis of why EEVDF does not prevent run-queue starvation or replace the need for eBPF attribution.
+
+---
+
+## 6. Gotcha: a deleted cgroup relabeled `unresolved` fakes a rate spike (2026-10-17)
+
+**Symptom.** After redeploying the bully, `ebpf_runq_latency_nanoseconds_count{prev_cgroup="unresolved"}`
+jumped sharply ~1 minute later (the `rate()` panels showed a trapezoid with `[5m]`, a
+triangle with `[1m]`; same area, different shape). Nothing real happened on the node.
+
+**Cause.** `runq_histograms` is keyed by cgroup *id* and is never pruned, so a dead pod's
+cumulative counts stay in the map. Labels are resolved from ids at *scrape* time through
+`cgroupMapper`, which used to replace its whole `id → label` map on every 30 s walk of
+`/sys/fs/cgroup`. Once the old bully pod's cgroup directory was gone, the next refresh
+could no longer resolve its id, so everything it had ever accumulated (tens of thousands
+of events) moved from `prev_cgroup="pod/<uid>/<cid>"` into the `unresolved` series in one
+step. That series is a counter, a counter that jumps by a lifetime's worth is exactly what
+`rate()` reports as a burst. The old series just vanished. The sum across all series never
+changed, which is the quickest check: `sum(rate(ebpf_runq_latency_nanoseconds_count[1m]))`
+shows no spike.
+
+The mirror image affects new cgroups: an id not yet seen by the walk was emitted as
+`unresolved` and then relabeled, so the `unresolved` counter *dropped*, which `rate()`
+reads as a counter reset and counts the whole value as an increase.
+
+**Fix** (`main.go`):
+
+- Deleted cgroups keep their last-known label (tombstone) for `deadCgroupRetention` (15 min),
+  so their counters stay flat in the same series.
+- Ids never seen are withheld for `unresolvedGrace` (2 min) while a lookup miss triggers a
+  rate-limited on-demand refresh, instead of being emitted as `unresolved` and relabeled.
+  The tree walk also runs every 10 s now.
+- `runqCollector.prune` deletes histogram entries whose cgroups have been gone longer than
+  the retention, so series stop rather than being relabeled. `ebpf_events_total` rebases
+  after a prune.
+
+**Reading the dashboard: label order.** In the Cloud Monitoring legends here the first label
+is `prev_cgroup` (who ran on the CPU just before) and the second is `cgroup` (the waiter that
+finally got the CPU). The collector only emits waiters under `pod/`, which is why `init.scope`
+and `unresolved` can only appear on the `prev_cgroup` side. So
+`pod/<bully> pod/<prometheus> 6.16` means prometheus waited behind the bully. Dashboard legends
+now spell this out as `waiter: … ← ran before: …`.

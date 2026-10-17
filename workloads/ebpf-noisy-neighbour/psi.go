@@ -47,7 +47,7 @@ func psiProcPath() string {
 // strings.HasPrefix(cgroup, "pod/") cardinality guard runqCollector uses.
 // Labels are resolved through the shared cgroupMapper (the same inode->label
 // path runqCollector takes), falling back to cgroupLabel() for directories the
-// mapper's 30s refresh has not picked up yet.
+// mapper's periodic refresh has not picked up yet.
 type psiCollector struct {
 	mapper *cgroupMapper
 
@@ -118,7 +118,7 @@ func (c *psiCollector) collectCgroups(ch chan<- prometheus.Metric) {
 func (c *psiCollector) cgroupLabelFor(path string, d os.DirEntry) string {
 	if info, err := d.Info(); err == nil {
 		if st, ok := info.Sys().(*syscall.Stat_t); ok {
-			if label := c.mapper.name(st.Ino); label != "" && label != "unresolved" {
+			if label, ok := c.mapper.name(st.Ino); ok && label != "" {
 				return label
 			}
 		}
