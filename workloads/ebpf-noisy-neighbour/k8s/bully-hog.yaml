@@ -33,6 +33,6 @@ spec:
         - "matrixprod"
         resources:
           requests:
-            cpu: "100m"        # Minimum request to get scheduled easily
+            cpu: "85m"         # Minimum request to get scheduled easily
           # DO NOT SET CPU LIMITS: allows it to consume all unallocated core time
           # (Burstable QoS -> stays in the shared pool, never gets an exclusive core)
