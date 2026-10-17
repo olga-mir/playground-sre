@@ -26,32 +26,23 @@
         "width": 24,
         "widget": {
           "title": "ebpf_runq_latency_nanoseconds_bucket, p99, by cgroup",
-          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR",
-              "showLegend": false
+              "mode": "COLOR"
             },
             "dataSets": [
               {
-                "breakdowns": [],
-                "dimensions": [],
-                "legendTemplate": "",
-                "measures": [],
+                "legendTemplate": "${labels.cgroup}",
                 "plotType": "LINE",
-                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "outputFullDuration": false,
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (le, cgroup)) / 1e6",
-                  "unitOverride": ""
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
                 }
               }
             ],
             "thresholds": [],
             "yAxis": {
-              "label": "",
               "scale": "LINEAR"
             }
           }
@@ -63,32 +54,22 @@
         "width": 24,
         "widget": {
           "title": "ebpf_runq_latency_nanoseconds_count by cgroup, prev_cgroup",
-          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR",
-              "showLegend": false
+              "mode": "COLOR"
             },
             "dataSets": [
               {
-                "breakdowns": [],
-                "dimensions": [],
-                "legendTemplate": "",
-                "measures": [],
                 "plotType": "LINE",
-                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[5m])) by (cgroup, prev_cgroup)\n  unless \ncgroup == prev_cgroup",
-                  "unitOverride": ""
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup"
                 }
               }
             ],
             "thresholds": [],
             "yAxis": {
-              "label": "",
               "scale": "LINEAR"
             }
           }
@@ -735,26 +716,18 @@
         "width": 16,
         "widget": {
           "title": "VICTIM runq latency p99 (ms) - cgroup = ${victim_cgroup}",
-          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR",
-              "showLegend": true
+              "mode": "COLOR"
             },
             "dataSets": [
               {
-                "breakdowns": [],
-                "dimensions": [],
                 "legendTemplate": "${labels.cgroup}",
-                "measures": [],
                 "plotType": "LINE",
-                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "outputFullDuration": false,
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup)) / 1e6",
-                  "unitOverride": ""
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
                 }
               }
             ],
