@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Pin every kubectl call to an explicit context when the caller sets one
-# (`task list-pod-cgroups` passes KUBE_CONTEXT); fall back to the current
+# (`task debug:cgroups` passes KUBE_CONTEXT); fall back to the current
 # context for standalone use.
 KUBE_CONTEXT="${KUBE_CONTEXT:-}"
 kubectl() {

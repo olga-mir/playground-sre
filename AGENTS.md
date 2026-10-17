@@ -95,7 +95,7 @@ task ebpf:deploy-victim DIR=stash      # optional: test workload to observe from
 task ebpf:deploy-victim-load DIR=stash # optional: fortio against victim-api, keeps it busy
 task ebpf:delete-test-workloads        # optional: tear down noisy-test namespace and workloads
 
-task ebpf:debug:cgroups                # map pods -> eBPF cgroup labels (alias: ebpf:list-pod-cgroups)
+task ebpf:debug:cgroups                # map pods -> eBPF cgroup labels; saved to $SRE_REPO_STASH (default <repo>/stash) (alias: ebpf:list-pod-cgroups)
 task ebpf:debug:list_cpus DIR=stash    # containers on the noisy-node, grouped by pinned CPU; saved to DIR/<date>-list-cpu-pinning.txt (alias: ebpf:list-cpu-pinning)
 task ebpf:deploy-bpftool               # bpftool DaemonSet required by dump_runqueue
 task ebpf:debug:dump_runqueue          # dump runq_enqueued/runq_histograms BPF maps (alias: ebpf:dump-runq-enqueued)

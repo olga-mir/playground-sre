@@ -5,6 +5,12 @@ vars:
   LIMA_INSTANCE_NAME: ebpf-dev
   REGISTRY_REPO: "{{.SERVICE_NAME}}"
 
+  # Default output dir for debug snapshots: $SRE_REPO_STASH if set, else
+  # <repo root>/stash (gitignored). Task runs from this directory, so a bare
+  # relative path would land inside the workload folder.
+  STASH_DIR:
+    sh: echo "${SRE_REPO_STASH:-$(git rev-parse --show-toplevel)/stash}"
+
   PROJECT_ID:
     sh: echo "${PROJECT_ID:?'PROJECT_ID environment variable is required'}"
   REGION:
@@ -221,23 +227,32 @@ tasks:
     desc: >
       List containers on the noisy-node pool by the CPU the kubelet pinned them
       to. Prints the result and saves it to
-      DIR/<YYYY.MM.DD-HH.MM.SS>-list-cpu-pinning.txt (DIR is required, created
-      if missing), e.g. `task ebpf:debug:list_cpus DIR=stash`.
-    requires:
-      vars: [DIR]
+      DIR/<YYYY.MM.DD-HH.MM.SS>-list-cpu-pinning.txt. DIR defaults to
+      $SRE_REPO_STASH, else <repo root>/stash (created if missing).
     cmds:
       - |
-        mkdir -p "{{.DIR}}"
-        out="{{.DIR}}/$(date +%Y.%m.%d-%H.%M.%S)-list-cpu-pinning.txt"
+        dir="{{default .STASH_DIR .DIR}}"
+        mkdir -p "$dir"
+        out="$dir/$(date +%Y.%m.%d-%H.%M.%S)-list-cpu-pinning.txt"
         KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cpu-pinning.sh > "$out"
         cat "$out"
         echo "Saved to $out"
 
-  debug:cgroups:
-    aliases: [debug:list_cgroups, debug:list-cgroups, debug:list-pod-cgroups, list-pod-cgroups]
-    desc: List pods grouped by node with their eBPF metric cgroup label (pod/UID/CID)
+  debug:list_cgroups_labels:
+    aliases: [debug:cgroups, debug:list_cgroups, debug:list-cgroups, debug:list-pod-cgroups, list-pod-cgroups, list_cgroups_labels]
+    desc: >
+      List containers on the noisy-node pool by their eBPF cgroup label.
+      Prints the result and saves it to
+      DIR/<YYYY.MM.DD-HH.MM.SS>-list-cgroup-labels.txt. DIR defaults to
+      $SRE_REPO_STASH, else <repo root>/stash (created if missing).
     cmds:
-      - KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cgroup-labels.sh
+      - |
+        dir="{{default .STASH_DIR .DIR}}"
+        mkdir -p "$dir"
+        out="$dir/$(date +%Y.%m.%d-%H.%M.%S)-list-cgroup-labels.txt"
+        KUBE_CONTEXT={{.KUBE_CONTEXT}} ./scripts/list-cgroup-labels.sh > "$out"
+        cat "$out"
+        echo "Saved to $out"
 
   debug:bpftool:
     aliases: [debug:bpftool-shell, debug:bpftool_shell]
