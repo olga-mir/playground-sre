@@ -87,7 +87,7 @@
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -113,7 +113,8 @@
                     "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"scope\"=\"node\""
                   },
                   "unitOverride": ""
-                }
+                },
+                "legendTemplate": "node ${metric.labels.kind}"
               },
               {
                 "breakdowns": [],
@@ -138,7 +139,8 @@
                     "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"cgroup\"=monitoring.regex.full_match(\"pod/[^/]+/.+\")"
                   },
                   "unitOverride": ""
-                }
+                },
+                "legendTemplate": "cgroup ${metric.labels.kind}"
               }
             ],
             "thresholds": [],
