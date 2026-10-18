@@ -208,6 +208,27 @@ tasks:
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/ballast.yaml
 
+  deploy-debugger:
+    desc: Deploy debugger DaemonSet (replaces ballast) — pins 1 exclusive core per test node AND provides bpftrace/tracing tools
+    deps: [ensure-namespace]
+    cmds:
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/debugger-pod.yaml
+      - echo "ℹ️  Debugger pod deployed. Use 'task ebpf:debug:sched-trace' to collect scheduler events, or 'task ebpf:debug:debugger-shell' for interactive access."
+
+  debug:debugger-shell:
+    aliases: [debug:debugger_shell, debug:debugger-interactive]
+    desc: Open an interactive shell in the debugger pod on the test node (tools auto-install on first access)
+    cmds:
+      - |
+        node="$(kubectl --context {{.KUBE_CONTEXT}} get nodes -l workload=noisy-node -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -n1)"
+        if [ -z "$node" ]; then echo "No node matches selector workload=noisy-node" >&2; exit 1; fi
+        pod="$(kubectl --context {{.KUBE_CONTEXT}} -n ebpf-noisy-neighbour get pods -l app=debugger --field-selector "spec.nodeName=${node}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -n1)"
+        if [ -z "$pod" ]; then echo "No debugger pod found on ${node}. Deploy with: task ebpf:deploy-debugger" >&2; exit 1; fi
+        echo "📍 Debugger pod: ${pod} on node ${node}"
+        echo "💡 First access will auto-install bpftrace and tools (~10-15s)"
+        echo ""
+        kubectl --context {{.KUBE_CONTEXT}} -n ebpf-noisy-neighbour exec -it "${pod}" -- /bin/bash
+
   deploy-bpftool:
     aliases: [debug:deploy-bpftool, debug:deploy_bpftool]
     desc: Deploy the bpftool DaemonSet used by dump_runqueue and debug:bpftool (privileged, noisy-node pool)

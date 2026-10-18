@@ -1,0 +1,86 @@
+# Debug pod: replaces ballast with a privileged pod that has bpftrace/tracing tools
+# Reserves one exclusive CPU core per test node (same as ballast) but provides
+# kernel tracing capabilities for live scheduler event collection.
+#
+# Usage:
+#   kubectl exec -it -n ebpf-noisy-neighbour debugger-<pod-suffix> -- bpftrace /tmp/sched-events.bt 0
+#
+# CPU pinning behavior:
+#   - requests == limits for both cpu and memory  => Guaranteed QoS
+#   - cpu: "1" (integer)                          => eligible for exclusive core via static CPU Manager
+#   - Same node selector + tolerations as ballast => pinned to test nodes
+#
+# Image: Ubuntu with bpftrace, linux-tools, and other debugging utilities pre-installed
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: debugger
+  namespace: ebpf-noisy-neighbour
+  labels:
+    app: debugger
+spec:
+  selector:
+    matchLabels:
+      app: debugger
+  template:
+    metadata:
+      labels:
+        app: debugger
+    spec:
+      nodeSelector:
+        workload: noisy-node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "noisy-node"
+        effect: "NoSchedule"
+      terminationGracePeriodSeconds: 0
+      hostPID: true              # needed for bpftrace to access kernel events
+      hostNetwork: true          # needed for network tracing
+      containers:
+      - name: debugger
+        image: ubuntu:24.04
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true       # needed for bpftrace, BPF maps, kernel tracing
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_RESOURCE
+            - NET_ADMIN
+        resources:
+          requests:
+            cpu: "1"             # one whole core, claimed exclusively via static CPU Manager
+            memory: "256Mi"      # slightly more than ballast for tooling
+          limits:
+            cpu: "1"
+            memory: "256Mi"
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            # Install tools on first run
+            if [ ! -f /tmp/tools-installed ]; then
+              apt-get update > /dev/null 2>&1
+              apt-get install -y bpftrace linux-tools-generic-hwe procps > /dev/null 2>&1
+              touch /tmp/tools-installed
+            fi
+            # Keep pod alive
+            tail -f /dev/null
+        volumeMounts:
+        - name: sys
+          mountPath: /sys
+        - name: debugfs
+          mountPath: /sys/kernel/debug
+        - name: tracefs
+          mountPath: /sys/kernel/tracing
+      volumes:
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: debugfs
+        hostPath:
+          path: /sys/kernel/debug
+      - name: tracefs
+        hostPath:
+          path: /sys/kernel/tracing
