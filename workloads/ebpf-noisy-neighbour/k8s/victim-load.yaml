@@ -1,6 +1,6 @@
-# Continuous HTTP load against victim-api (hashicorp/http-echo on :5678).
-# http-echo does no work until a request arrives, so this is what makes the
-# victim runnable and able to be starved by bully-hog.
+# Continuous HTTP load against victim-api (perf-lab on :5678).
+# Hits the /v1/scenarios/sleep endpoint with a 10ms baseline sleep to create
+# measurable latency that degrades under scheduler contention from bully-hog.
 #
 # Pinned to the default node pool. test-pool is the experiment node
 # (workload=noisy-node); this pod must not land there. The default pool is an
@@ -28,7 +28,7 @@ spec:
       - name: fortio
         image: fortio/fortio:latest
         # -qps 0 = as fast as possible, -t 0 = until the pod is deleted.
-        # 32 connections is enough to keep a 1-core-capped http-echo busy.
+        # 32 connections is enough to keep a 1-core-capped perf-lab instance busy.
         args:
         - load
         - -qps
@@ -38,7 +38,7 @@ spec:
         - -t
         - "0"
         - -allow-initial-errors
-        - http://victim-api.noisy-test.svc:5678/
+        - http://victim-api.noisy-test.svc:5678/v1/scenarios/sleep?duration=10ms
         resources:
           requests:
             cpu: "100m"

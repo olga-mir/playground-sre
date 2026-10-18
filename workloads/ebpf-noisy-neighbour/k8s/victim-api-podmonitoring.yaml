@@ -1,0 +1,17 @@
+# PodMonitoring for victim-api latency metrics.
+# Tells GKE Managed Prometheus to scrape /metrics on the victim-api pod.
+# This captures http_request_duration_seconds histogram for analysis alongside
+# CPU, PSI, and scheduler latency metrics.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: victim-api
+  namespace: noisy-test
+spec:
+  selector:
+    matchLabels:
+      app: victim-api
+  endpoints:
+    - port: http
+      interval: 15s
+      path: /metrics
