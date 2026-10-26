@@ -4,14 +4,14 @@
     {
       "filterType": "VALUE_ONLY",
       "labelKey": "",
-      "stringValue": "pod/VICTIM_UID/.+",
+      "stringValue": "pod/13f3efe7/.+",
       "templateVariable": "victim_cgroup",
       "valueType": "STRING"
     },
     {
       "filterType": "VALUE_ONLY",
       "labelKey": "",
-      "stringValue": "pod/BULLY_UID/.+",
+      "stringValue": "pod/d474a653/.+",
       "templateVariable": "bully_cgroup",
       "valueType": "STRING"
     }
@@ -26,23 +26,32 @@
         "width": 24,
         "widget": {
           "title": "ebpf_runq_latency_nanoseconds_bucket, p99, by cgroup (waiter)",
+          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR"
+              "mode": "COLOR",
+              "showLegend": false
             },
             "dataSets": [
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "waiter: ${labels.cgroup}",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
+                  "unitOverride": ""
                 }
               }
             ],
             "thresholds": [],
             "yAxis": {
+              "label": "",
               "scale": "LINEAR"
             }
           }
@@ -54,23 +63,32 @@
         "width": 24,
         "widget": {
           "title": "ebpf_runq_latency_nanoseconds_count by cgroup (waiter), prev_cgroup (ran before)",
+          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
-              "mode": "COLOR"
+              "mode": "COLOR",
+              "showLegend": false
             },
             "dataSets": [
               {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup"
-                },
-                "legendTemplate": "waiter: ${labels.cgroup} \u2190 ran before: ${labels.prev_cgroup}"
+                  "outputFullDuration": false,
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup",
+                  "unitOverride": ""
+                }
               }
             ],
             "thresholds": [],
             "yAxis": {
+              "label": "",
               "scale": "LINEAR"
             }
           }
@@ -93,6 +111,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
+                "legendTemplate": "node ${metric.labels.kind}",
                 "measures": [],
                 "minAlignmentPeriod": "60s",
                 "plotType": "LINE",
@@ -113,12 +132,12 @@
                     "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"scope\"=\"node\""
                   },
                   "unitOverride": ""
-                },
-                "legendTemplate": "node ${metric.labels.kind}"
+                }
               },
               {
                 "breakdowns": [],
                 "dimensions": [],
+                "legendTemplate": "cgroup ${metric.labels.kind}",
                 "measures": [],
                 "minAlignmentPeriod": "60s",
                 "plotType": "LINE",
@@ -139,8 +158,7 @@
                     "filter": "metric.type=\"prometheus.googleapis.com/ebpf_psi_stall_seconds_total/counter\" resource.type=\"prometheus_target\" metric.label.\"resource\"=\"cpu\" metric.label.\"cgroup\"=monitoring.regex.full_match(\"pod/[^/]+/.+\")"
                   },
                   "unitOverride": ""
-                },
-                "legendTemplate": "cgroup ${metric.labels.kind}"
+                }
               }
             ],
             "thresholds": [],
@@ -356,7 +374,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter: ${labels.cgroup} \u2190 ran before: ${labels.prev_cgroup}",
+                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -464,17 +482,14 @@
       },
       {
         "yPos": 80,
-        "xPos": 1,
         "height": 6,
         "width": 38,
         "widget": {
-          "title": "",
-          "id": "",
           "text": {
-            "content": "# Intro\nNatively exposed PSI metrics by Kubernetes stable from 1.36: https://kubernetes.io/docs/reference/instrumentation/understand-psi-metrics/",
+            "content": "# PSI\nNatively exposed PSI metrics by Kubernetes stable from 1.36: [https://kubernetes.io/docs/reference/instrumentation/understand-psi-metrics/](https://kubernetes.io/docs/reference/instrumentation/understand-psi-metrics/)",
             "format": "MARKDOWN",
             "style": {
-              "backgroundColor": "#FFFFFF",
+              "backgroundColor": "#777777",
               "fontSize": "FS_LARGE",
               "horizontalAlignment": "H_LEFT",
               "padding": "P_EXTRA_SMALL",
@@ -490,13 +505,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) \u2014 CPU \u2014 bully & victim",
+          "title": "k8s PSI some (waiting) — CPU — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -528,13 +543,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) \u2014 memory \u2014 bully & victim",
+          "title": "k8s PSI some (waiting) — memory — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -566,13 +581,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) \u2014 I/O \u2014 bully & victim",
+          "title": "k8s PSI some (waiting) — I/O — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -603,13 +618,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) \u2014 CPU \u2014 bully & victim",
+          "title": "k8s PSI full (stalled) — CPU — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -641,13 +656,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) \u2014 memory \u2014 bully & victim",
+          "title": "k8s PSI full (stalled) — memory — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -679,13 +694,13 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) \u2014 I/O \u2014 bully & victim",
+          "title": "k8s PSI full (stalled) — I/O — bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -713,7 +728,7 @@
       },
       {
         "yPos": 118,
-        "height": 32,
+        "height": 38,
         "width": 48,
         "widget": {
           "title": "Targeted Demo Pods: Victim HTTP Latency & Contention",
@@ -724,22 +739,47 @@
         }
       },
       {
-        "xPos": 0,
         "yPos": 118,
-        "width": 24,
+        "height": 6,
+        "width": 38,
+        "widget": {
+          "title": "Runqueue latency",
+          "text": {
+            "content": "Populate cgroup labels in dashboard filters",
+            "format": "MARKDOWN",
+            "style": {
+              "backgroundColor": "#555555",
+              "fontSize": "FS_LARGE",
+              "horizontalAlignment": "H_LEFT",
+              "padding": "P_EXTRA_SMALL",
+              "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+              "textColor": "#212121",
+              "verticalAlignment": "V_TOP"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 124,
         "height": 16,
+        "width": 24,
         "widget": {
           "title": "VICTIM HTTP Request Latency p99 / p95 / p50 (ms)",
+          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "p99 HTTP latency",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
@@ -748,8 +788,12 @@
                 }
               },
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "p95 HTTP latency",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
@@ -758,8 +802,12 @@
                 }
               },
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "p50 HTTP latency",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
@@ -777,22 +825,27 @@
         }
       },
       {
+        "yPos": 124,
         "xPos": 24,
-        "yPos": 118,
-        "width": 24,
         "height": 16,
+        "width": 24,
         "widget": {
           "title": "VICTIM HTTP Request Rate & Errors (req/s)",
+          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "${labels.route} (${labels.status})",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
@@ -810,32 +863,45 @@
         }
       },
       {
-        "yPos": 134,
+        "yPos": 140,
         "height": 16,
         "width": 16,
         "widget": {
           "title": "VICTIM runq latency p99 / p95 (ms, waits >1ms) - waiter = victim",
+          "id": "",
           "xyChart": {
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "p99 waiter: ${labels.cgroup}",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
+                  "unitOverride": ""
                 }
               },
               {
+                "breakdowns": [],
+                "dimensions": [],
                 "legendTemplate": "p95 waiter: ${labels.cgroup}",
+                "measures": [],
                 "plotType": "LINE",
+                "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6"
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
+                  "unitOverride": ""
                 }
               }
             ],
@@ -848,7 +914,7 @@
         }
       },
       {
-        "yPos": 134,
+        "yPos": 140,
         "xPos": 16,
         "height": 16,
         "width": 16,
@@ -859,13 +925,13 @@
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} \u2190 BULLY",
+                "legendTemplate": "waiter ${labels.cgroup} ← BULLY",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -879,7 +945,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} \u2190 self",
+                "legendTemplate": "waiter ${labels.cgroup} ← self",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -893,7 +959,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} \u2190 other (system/host)",
+                "legendTemplate": "waiter ${labels.cgroup} ← other (system/host)",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -914,7 +980,7 @@
         }
       },
       {
-        "yPos": 134,
+        "yPos": 140,
         "xPos": 32,
         "height": 16,
         "width": 16,
@@ -925,7 +991,7 @@
             "chartOptions": {
               "displayHorizontal": false,
               "mode": "COLOR",
-              "showLegend": true
+              "showLegend": false
             },
             "dataSets": [
               {
@@ -952,7 +1018,7 @@
         }
       },
       {
-        "yPos": 150,
+        "yPos": 156,
         "height": 16,
         "width": 24,
         "widget": {
@@ -989,7 +1055,7 @@
         }
       },
       {
-        "yPos": 150,
+        "yPos": 156,
         "xPos": 24,
         "height": 16,
         "width": 24,
