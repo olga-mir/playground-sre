@@ -66,7 +66,7 @@
                 "timeSeriesQuery": {
                   "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup"
                 },
-                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}"
+                "legendTemplate": "waiter: ${labels.cgroup} \u2190 ran before: ${labels.prev_cgroup}"
               }
             ],
             "thresholds": [],
@@ -356,7 +356,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter: ${labels.cgroup} ← ran before: ${labels.prev_cgroup}",
+                "legendTemplate": "waiter: ${labels.cgroup} \u2190 ran before: ${labels.prev_cgroup}",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -490,7 +490,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — CPU — bully & victim",
+          "title": "k8s PSI some (waiting) \u2014 CPU \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -528,7 +528,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — memory — bully & victim",
+          "title": "k8s PSI some (waiting) \u2014 memory \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -566,7 +566,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — I/O — bully & victim",
+          "title": "k8s PSI some (waiting) \u2014 I/O \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -603,7 +603,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — CPU — bully & victim",
+          "title": "k8s PSI full (stalled) \u2014 CPU \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -641,7 +641,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — memory — bully & victim",
+          "title": "k8s PSI full (stalled) \u2014 memory \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -679,7 +679,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — I/O — bully & victim",
+          "title": "k8s PSI full (stalled) \u2014 I/O \u2014 bully & victim",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -713,6 +713,104 @@
       },
       {
         "yPos": 118,
+        "height": 32,
+        "width": 48,
+        "widget": {
+          "title": "Targeted Demo Pods: Victim HTTP Latency & Contention",
+          "collapsibleGroup": {
+            "collapsed": false
+          },
+          "id": ""
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 118,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "VICTIM HTTP Request Latency p99 / p95 / p50 (ms)",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "p99 HTTP latency",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=~\"victim-api.*\", route=~\"/v1/.*\"}[1m])) by (le, ${__groupby})) * 1000",
+                  "unitOverride": ""
+                }
+              },
+              {
+                "legendTemplate": "p95 HTTP latency",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"victim-api.*\", route=~\"/v1/.*\"}[1m])) by (le, ${__groupby})) * 1000",
+                  "unitOverride": ""
+                }
+              },
+              {
+                "legendTemplate": "p50 HTTP latency",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=~\"victim-api.*\", route=~\"/v1/.*\"}[1m])) by (le, ${__groupby})) * 1000",
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "ms",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 118,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "VICTIM HTTP Request Rate & Errors (req/s)",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": true
+            },
+            "dataSets": [
+              {
+                "legendTemplate": "${labels.route} (${labels.status})",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "sum(rate(http_requests_total{job=~\"victim-api.*\", route=~\"/v1/.*\"}[1m])) by (status, route, ${__groupby})",
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "req/s",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 134,
         "height": 16,
         "width": 16,
         "widget": {
@@ -750,19 +848,7 @@
         }
       },
       {
-        "yPos": 118,
-        "height": 16,
-        "width": 48,
-        "widget": {
-          "title": "Targetted runq for demo pods only",
-          "collapsibleGroup": {
-            "collapsed": false
-          },
-          "id": ""
-        }
-      },
-      {
-        "yPos": 118,
+        "yPos": 134,
         "xPos": 16,
         "height": 16,
         "width": 16,
@@ -779,7 +865,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} ← BULLY",
+                "legendTemplate": "waiter ${labels.cgroup} \u2190 BULLY",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -793,7 +879,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} ← self",
+                "legendTemplate": "waiter ${labels.cgroup} \u2190 self",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -807,7 +893,7 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} ← other (system/host)",
+                "legendTemplate": "waiter ${labels.cgroup} \u2190 other (system/host)",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
@@ -828,7 +914,7 @@
         }
       },
       {
-        "yPos": 118,
+        "yPos": 134,
         "xPos": 32,
         "height": 16,
         "width": 16,
@@ -866,7 +952,7 @@
         }
       },
       {
-        "yPos": 134,
+        "yPos": 150,
         "height": 16,
         "width": 24,
         "widget": {
@@ -903,7 +989,7 @@
         }
       },
       {
-        "yPos": 134,
+        "yPos": 150,
         "xPos": 24,
         "height": 16,
         "width": 24,
