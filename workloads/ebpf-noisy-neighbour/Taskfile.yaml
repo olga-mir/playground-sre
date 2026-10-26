@@ -292,6 +292,7 @@ tasks:
     deps: [ensure-test-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/victim-api-podmonitoring.yaml
       - kubectl --context {{.KUBE_CONTEXT}} -n noisy-test rollout status deploy/victim-api --timeout=180s
       - task: debug:list_cgroups_labels
 

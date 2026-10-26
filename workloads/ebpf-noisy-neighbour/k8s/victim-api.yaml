@@ -37,7 +37,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: api
-        image: index.docker.io/olmigar/perf-lab:main
+        image: index.docker.io/olmigar/perf-lab:main-20260923091918-b384360
         ports:
         - containerPort: 8080
           name: http
