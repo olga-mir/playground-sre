@@ -1,0 +1,60 @@
+// Collect scheduler events on a single CPU for visualization
+// Usage: bpftrace sched-events.bt 0       (records CPU 0)
+//        bpftrace sched-events.bt 1       (records CPU 1)
+// Output: JSONL format to stdout
+
+BEGIN {
+    @trace_start = nsecs;
+    @target_cpu = (uint64)$1;
+    printf("# Recording scheduler events on CPU %llu\n", @target_cpu);
+    printf("# Start timestamp: %llu ns\n", @trace_start);
+}
+
+tracepoint:sched:sched_wakeup {
+    if (cpu == @target_cpu) {
+        @wakeup_time[args->pid] = nsecs;
+        $elapsed_ns = nsecs - @trace_start;
+        $elapsed_ms = $elapsed_ns / 1000000;
+
+        printf("{\"event\":\"wakeup\",\"ts_ms\":%llu,\"ts_ns\":%llu,\"pid\":%d,\"comm\":\"%s\",\"target_cpu\":%d,\"prio\":%d,\"cpu\":%d}\n",
+            $elapsed_ms,
+            $elapsed_ns,
+            args->pid,
+            args->comm,
+            args->target_cpu,
+            args->prio,
+            cpu
+        );
+    }
+}
+
+tracepoint:sched:sched_switch {
+    if (cpu == @target_cpu) {
+        $elapsed_ns = nsecs - @trace_start;
+        $elapsed_ms = $elapsed_ns / 1000000;
+        $wake_latency_us = (uint64)0;
+
+        if (@wakeup_time[args->next_pid]) {
+            $wake_latency_us = (nsecs - @wakeup_time[args->next_pid]) / 1000;
+            delete(@wakeup_time[args->next_pid]);
+        }
+
+        printf("{\"event\":\"switch\",\"ts_ms\":%llu,\"ts_ns\":%llu,\"pid\":%d,\"comm\":\"%s\",\"prio\":%d,\"prev_pid\":%d,\"prev_comm\":\"%s\",\"prev_prio\":%d,\"prev_state\":%d,\"wake_latency_us\":%llu}\n",
+            $elapsed_ms,
+            $elapsed_ns,
+            args->next_pid,
+            args->next_comm,
+            args->next_prio,
+            args->prev_pid,
+            args->prev_comm,
+            args->prev_prio,
+            args->prev_state,
+            $wake_latency_us
+        );
+    }
+}
+
+END {
+    $total_duration_ms = (nsecs - @trace_start) / 1000000;
+    printf("# Trace complete. Duration: %llu ms\n", $total_duration_ms);
+}
