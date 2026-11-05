@@ -1,5 +1,5 @@
 # Continuous HTTP load against victim-api (perf-lab on :5678).
-# Hits the /v1/scenarios/sleep endpoint with a 10ms baseline sleep to create
+# Hits the /v1/scenarios/sleep endpoint with a 10ms baseline sleep plus 0-30ms uniform jitter (so latency has a spread) to create
 # measurable latency that degrades under scheduler contention from bully-hog.
 #
 # Pinned to the default node pool. test-pool is the experiment node
@@ -38,7 +38,7 @@ spec:
         - -t
         - "0"
         - -allow-initial-errors
-        - http://victim-api.noisy-test.svc:5678/v1/scenarios/sleep?duration=10ms
+        - http://victim-api.noisy-test.svc:5678/v1/scenarios/sleep?duration=10ms&jitter=30ms
         resources:
           requests:
             cpu: "100m"

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -94,12 +95,18 @@ func (app *application) cpuHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) sleepHandler(w http.ResponseWriter, r *http.Request) {
 	d := parseDuration(r, "duration", 100*time.Millisecond)
+	// Optional jitter: adds a uniform random 0..jitter to the sleep so request
+	// latency has a realistic spread instead of a fixed floor.
+	jitter := parseDuration(r, "jitter", 0)
+	if jitter > 0 {
+		d += time.Duration(rand.Int64N(int64(jitter)))
+	}
 
 	result := scenarios.Sleep(r.Context(), d)
 
 	app.writeJSON(w, http.StatusOK, envelope{
 		"scenario": "sleep",
-		"params":   map[string]any{"duration_ms": d.Milliseconds()},
+		"params":   map[string]any{"duration_ms": d.Milliseconds(), "jitter_ms": jitter.Milliseconds()},
 		"result":   result,
 	}, nil)
 }
