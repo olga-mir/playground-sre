@@ -5,14 +5,14 @@
       "filterType": "VALUE_ONLY",
       "labelKey": "",
       "stringValue": "pod/13f3efe7/.+",
-      "templateVariable": "victim_cgroup",
+      "templateVariable": "starved_cgroup",
       "valueType": "STRING"
     },
     {
       "filterType": "VALUE_ONLY",
       "labelKey": "",
       "stringValue": "pod/d474a653/.+",
-      "templateVariable": "bully_cgroup",
+      "templateVariable": "contender_cgroup",
       "valueType": "STRING"
     }
   ],
@@ -81,7 +81,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )\n  unless \ncgroup == prev_cgroup",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"pod/[^/]+/.+\"}[1m])) by (cgroup, prev_cgroup, ${__groupby} )",
                   "unitOverride": ""
                 }
               }
@@ -362,7 +362,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "ebpf_runq_latency_nanoseconds_count - victim (waiter) behind prev_cgroup",
+          "title": "ebpf_runq_latency_nanoseconds_count - starved (waiter) behind prev_cgroup",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -400,7 +400,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "CPU request/usage victim/bully",
+          "title": "CPU request/usage starved/contender",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -505,7 +505,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — CPU — bully & victim",
+          "title": "k8s PSI some (waiting) — CPU — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -543,7 +543,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — memory — bully & victim",
+          "title": "k8s PSI some (waiting) — memory — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -581,7 +581,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI some (waiting) — I/O — bully & victim",
+          "title": "k8s PSI some (waiting) — I/O — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -618,7 +618,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — CPU — bully & victim",
+          "title": "k8s PSI full (stalled) — CPU — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -656,7 +656,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — memory — bully & victim",
+          "title": "k8s PSI full (stalled) — memory — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -694,7 +694,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "k8s PSI full (stalled) — I/O — bully & victim",
+          "title": "k8s PSI full (stalled) — I/O — contender & starved",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -731,7 +731,7 @@
         "height": 38,
         "width": 48,
         "widget": {
-          "title": "Targeted Demo Pods: Victim HTTP Latency & Contention",
+          "title": "Targeted Demo Pods: Starved HTTP Latency & Contention",
           "collapsibleGroup": {
             "collapsed": false
           },
@@ -764,7 +764,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "VICTIM HTTP Request Latency p99 / p95 / p50 (ms)",
+          "title": "STARVED HTTP Request Latency p99 / p95 / p50 (ms)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -830,7 +830,7 @@
         "height": 16,
         "width": 24,
         "widget": {
-          "title": "VICTIM HTTP Request Rate & Errors (req/s)",
+          "title": "STARVED HTTP Request Rate & Errors (req/s)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -867,7 +867,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "VICTIM runq latency p99 / p95 (ms, waits >1ms) - waiter = victim",
+          "title": "STARVED runq latency p99 / p95 (ms, waits ≥ 1 ms)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -886,7 +886,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
+                  "prometheusQuery": "histogram_quantile(0.99, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${starved_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
                   "unitOverride": ""
                 }
               },
@@ -900,7 +900,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${victim_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
+                  "prometheusQuery": "histogram_quantile(0.95, sum(rate(ebpf_runq_latency_nanoseconds_bucket{cgroup=~\"${starved_cgroup}\"}[1m])) by (le, cgroup, ${__groupby})) / 1e6",
                   "unitOverride": ""
                 }
               }
@@ -919,7 +919,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "VICTIM waits by who ran before it: bully vs self vs everyone else (events/s)",
+          "title": "STARVED waits by who ran before it: contender vs self vs everyone else (events/s)",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -931,14 +931,14 @@
               {
                 "breakdowns": [],
                 "dimensions": [],
-                "legendTemplate": "waiter ${labels.cgroup} ← BULLY",
+                "legendTemplate": "waiter ${labels.cgroup} ← CONTENDER",
                 "measures": [],
                 "plotType": "LINE",
                 "sort": [],
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup=~\"${bully_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${starved_cgroup}\", prev_cgroup=~\"${contender_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               },
@@ -952,7 +952,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup=~\"${victim_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${starved_cgroup}\", prev_cgroup=~\"${starved_cgroup}\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               },
@@ -966,7 +966,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${victim_cgroup}\", prev_cgroup!~\"${bully_cgroup}\", prev_cgroup!~\"${victim_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup, ${__groupby})",
+                  "prometheusQuery": "sum(rate(ebpf_runq_latency_nanoseconds_count{cgroup=~\"${starved_cgroup}\", prev_cgroup!~\"${contender_cgroup}\", prev_cgroup!~\"${starved_cgroup}\", prev_cgroup!=\"\"}[1m])) by (cgroup, ${__groupby})",
                   "unitOverride": ""
                 }
               }
@@ -985,7 +985,7 @@
         "height": 16,
         "width": 16,
         "widget": {
-          "title": "CPU PSI some avg10 - victim vs bully",
+          "title": "CPU PSI some avg10 - starved vs contender",
           "id": "",
           "xyChart": {
             "chartOptions": {
@@ -1004,7 +1004,7 @@
                 "targetAxis": "Y1",
                 "timeSeriesQuery": {
                   "outputFullDuration": false,
-                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\", cgroup=~\"${victim_cgroup}|${bully_cgroup}\"}",
+                  "prometheusQuery": "ebpf_psi_pressure_ratio{resource=\"cpu\", kind=\"some\", window=\"avg10\", scope=\"cgroup\", cgroup=~\"${starved_cgroup}|${contender_cgroup}\"}",
                   "unitOverride": ""
                 }
               }
