@@ -27,7 +27,7 @@ spec:
         - "--cpu"
         - "1"
         - "--cpu-load"
-        - "50"                 # duty-cycle each worker to ~50% of a core: a hog that sleeps/wakes, not a 100% wall.
+        - "70"                 # duty-cycle each worker to ~70% of a core: a hog that sleeps/wakes, not a 100% wall.
                                # Tune 30-70 to dial contention without touching requests or adding a (throttling) limit.
         - "--cpu-method"
         - "matrixprod"

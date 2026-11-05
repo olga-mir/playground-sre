@@ -74,8 +74,11 @@ func New() (*Telemetry, error) {
 		metric.WithDescription("HTTP request latency distribution"),
 		metric.WithUnit("s"),
 		// Buckets tuned for a mix of sub-ms health checks and multi-second CPU/disk scenarios.
+		// The 10-100ms range is dense so p99 of ~10-50ms scenarios (e.g. sleep with jitter)
+		// resolves instead of interpolating to a bucket ceiling.
 		metric.WithExplicitBucketBoundaries(
-			0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30,
+			0.001, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05,
+			0.06, 0.075, 0.1, 0.15, 0.25, 0.5, 1, 2.5, 5, 10, 30,
 		),
 	)
 	if err != nil {
