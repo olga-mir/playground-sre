@@ -15,24 +15,29 @@ type UpstreamParams struct {
 	// TargetURL is the URL each goroutine calls. Defaults to the server's own
 	// sleep endpoint so the scenario is self-contained.
 	TargetURL string
-	// N is the number of concurrent calls.
+	// N is the number of calls.
 	N int
+	// Sequential makes the calls one after another instead of concurrently, so
+	// per-call latency (including any scheduler wait on each wake-up) adds up
+	// the way it does across hops of a real request chain.
+	Sequential bool
 	// Timeout is the per-call HTTP timeout.
 	Timeout time.Duration
 }
 
 // UpstreamResult is returned by Upstream.
 type UpstreamResult struct {
-	N               int     `json:"n"`
-	Successful      int     `json:"successful"`
-	Failed          int     `json:"failed"`
-	P50MS           float64 `json:"p50_ms"`
-	P95MS           float64 `json:"p95_ms"`
-	P99MS           float64 `json:"p99_ms"`
-	WallDurationMS  int64   `json:"wall_duration_ms"`
+	N              int     `json:"n"`
+	Successful     int     `json:"successful"`
+	Failed         int     `json:"failed"`
+	P50MS          float64 `json:"p50_ms"`
+	P95MS          float64 `json:"p95_ms"`
+	P99MS          float64 `json:"p99_ms"`
+	WallDurationMS int64   `json:"wall_duration_ms"`
 }
 
-// Upstream fires p.N concurrent HTTP GET requests to p.TargetURL and returns
+// Upstream fires p.N HTTP GET requests (concurrent, or one after another when
+// p.Sequential is set) to p.TargetURL and returns
 // aggregate latency percentiles.
 //
 // This exercises:
@@ -54,35 +59,45 @@ func Upstream(ctx context.Context, p UpstreamParams) UpstreamResult {
 	client := &http.Client{Timeout: p.Timeout}
 	wall := time.Now()
 
-	for i := range p.N {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			start := time.Now()
+	call := func(idx int) {
+		start := time.Now()
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.TargetURL, nil)
-			if err != nil {
-				results[idx] = callResult{err: err}
-				return
-			}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.TargetURL, nil)
+		if err != nil {
+			results[idx] = callResult{err: err}
+			return
+		}
 
-			resp, err := client.Do(req)
-			ms := float64(time.Since(start).Microseconds()) / 1000.0
-			if err != nil {
-				results[idx] = callResult{durationMS: ms, err: err}
-				return
-			}
-			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+		resp, err := client.Do(req)
+		ms := float64(time.Since(start).Microseconds()) / 1000.0
+		if err != nil {
+			results[idx] = callResult{durationMS: ms, err: err}
+			return
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
 
-			if resp.StatusCode >= 400 {
-				results[idx] = callResult{durationMS: ms, err: fmt.Errorf("HTTP %d", resp.StatusCode)}
-				return
-			}
-			results[idx] = callResult{durationMS: ms}
-		}(i)
+		if resp.StatusCode >= 400 {
+			results[idx] = callResult{durationMS: ms, err: fmt.Errorf("HTTP %d", resp.StatusCode)}
+			return
+		}
+		results[idx] = callResult{durationMS: ms}
 	}
-	wg.Wait()
+
+	if p.Sequential {
+		for i := range p.N {
+			call(i)
+		}
+	} else {
+		for i := range p.N {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				call(idx)
+			}(i)
+		}
+		wg.Wait()
+	}
 
 	var durations []float64
 	var failed int

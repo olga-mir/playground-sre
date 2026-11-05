@@ -122,6 +122,8 @@ func (app *application) upstreamHandler(w http.ResponseWriter, r *http.Request) 
 		TargetURL: r.URL.Query().Get("target"),
 		N:         parseInt(r, "n", 5),
 		Timeout:   parseDuration(r, "timeout", 5*time.Second),
+		// ?sequential=true chains the calls so their latencies add up.
+		Sequential: r.URL.Query().Get("sequential") == "true",
 	}
 	if p.TargetURL == "" {
 		p.TargetURL = defaultTarget
@@ -143,6 +145,7 @@ func (app *application) upstreamHandler(w http.ResponseWriter, r *http.Request) 
 			"target":     p.TargetURL,
 			"n":          p.N,
 			"timeout_ms": p.Timeout.Milliseconds(),
+			"sequential": p.Sequential,
 		},
 		"result": result,
 	}, nil)
