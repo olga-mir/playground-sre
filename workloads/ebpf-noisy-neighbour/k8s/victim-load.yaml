@@ -1,6 +1,8 @@
 # Continuous HTTP load against victim-api (perf-lab on :5678).
-# Hits the /v1/scenarios/sleep endpoint with a 10ms baseline sleep plus 0-30ms uniform jitter (so latency has a spread) to create
-# measurable latency that degrades under scheduler contention from bully-hog.
+# Hits /v1/scenarios/upstream (sequential, calling the sleep endpoint) as a 10-hop sequential chain of 2ms sleeps at a fixed 100 qps (8 connections).
+# Each hop is a separate wake-up, so run-queue waits from bully-hog add up across
+# the request instead of hitting a single hop. The victim stays well under its
+# CPU limit (no CFS throttling).
 #
 # Pinned to the default node pool. test-pool is the experiment node
 # (workload=noisy-node); this pod must not land there. The default pool is an
@@ -27,18 +29,17 @@ spec:
       containers:
       - name: fortio
         image: fortio/fortio:latest
-        # -qps 0 = as fast as possible, -t 0 = until the pod is deleted.
-        # 32 connections is enough to keep a 1-core-capped perf-lab instance busy.
+        # Fixed 100 qps over 8 connections, -t 0 = until the pod is deleted.
         args:
         - load
         - -qps
-        - "0"
+        - "100"
         - -c
-        - "32"
+        - "8"
         - -t
         - "0"
         - -allow-initial-errors
-        - http://victim-api.noisy-test.svc:5678/v1/scenarios/sleep?duration=10ms&jitter=30ms
+        - http://victim-api.noisy-test.svc:5678/v1/scenarios/upstream?n=10&sequential=true&target=http://localhost:8080/v1/scenarios/sleep?duration=2ms
         resources:
           requests:
             cpu: "100m"
