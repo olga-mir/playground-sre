@@ -1,7 +1,9 @@
 # Demos
 
-More details to follow
+Loose write-ups that haven't been turned into tutorials yet. The structured series lives in
+[`../tutorials/`](../tutorials/README.md).
 
 ## Index
 
-- [Cloud Profiler](cloud-profiler.md) - GCP Cloud Profiler integration with Flame Graphs
+- [bpftrace snippets](bpftrace-snippets.md): planned as tutorial 06
+- Cloud Profiler: moved to [tutorials/04-profiling](../tutorials/04-profiling/README.md)

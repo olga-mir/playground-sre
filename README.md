@@ -11,7 +11,8 @@ Each workload is a self-contained Go module under `workloads/<name>/` with its o
 - `workloads/` — the workloads described below.
 - `infra/` — supporting monitoring assets (e.g. Cloud Monitoring dashboards).
 - `docs/` — cross-cutting docs, e.g. [GitOps with Flux](docs/gitops-flux.md).
-- `demo/` — write-ups and screenshots from demos.
+- `tutorials/` — hands-on performance tutorials; start at [tutorials/README.md](tutorials/README.md).
+- `demo/` — loose write-ups not yet turned into tutorials.
 - `stash/` — scratch output from experiment runs (cgroup maps, CPU pinning snapshots, screenshots).
 
 ## Workloads
@@ -54,7 +55,7 @@ task perf-lab:build
 task perf-lab:test
 ```
 
-**Observability.** Metrics use the OpenTelemetry metric API and are exposed in Prometheus text format on `/metrics`, scraped by GKE Managed Prometheus via the `PodMonitoring` in `k8s/`. Key series: `http_request_duration_seconds`, `http_requests_total`, `http_requests_in_flight`, plus per-scenario counters (`scenario_cpu_hashes_total`, `scenario_upstream_calls_total`, `scenario_disk_bytes_*_total`, `scenario_fanout_hashes_total`). To add traces, wire an OTLP trace exporter in `cmd/api/main.go`; the instrumentation API stays the same. See [demo/cloud-profiler.md](demo/cloud-profiler.md) for Cloud Profiler.
+**Observability.** Metrics use the OpenTelemetry metric API and are exposed in Prometheus text format on `/metrics`, scraped by GKE Managed Prometheus via the `PodMonitoring` in `k8s/`. Key series: `http_request_duration_seconds`, `http_requests_total`, `http_requests_in_flight`, plus per-scenario counters (`scenario_cpu_hashes_total`, `scenario_upstream_calls_total`, `scenario_disk_bytes_*_total`, `scenario_fanout_hashes_total`). To add traces, wire an OTLP trace exporter in `cmd/api/main.go`; the instrumentation API stays the same. See [tutorials/04-profiling](tutorials/04-profiling/README.md) for Cloud Profiler.
 
 ### ebpf-noisy-neighbour
 

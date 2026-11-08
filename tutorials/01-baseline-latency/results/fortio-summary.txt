@@ -1,0 +1,29 @@
+# fortio 1.73.0, 8-core laptop, 2026-11-08. Server: DISABLE_RATE_LIMIT=true
+# Trimmed to the summary lines.
+
+## run 1: sleep 50ms, -qps 50 -c 4
+Aggregated Function Time : count 500 avg 0.052827816 +/- 0.002368 min 0.050756375 max 0.064475167
+# target 50% 0.0554923
+# target 75% 0.0578698
+# target 90% 0.0592963
+# target 99% 0.0627539
+# target 99.9% 0.064303
+All done 500 calls (plus 4 warmup) 52.828 ms avg, 49.7 qps
+
+## run 2: cpu 50ms goroutines=1, -qps 0 -c 8
+Aggregated Function Time : count 1541 avg 0.052038518 +/- 0.003287 min 0.050091708 max 0.090596291
+# target 50% 0.0552191
+# target 75% 0.0577861
+# target 90% 0.0593263
+# target 99% 0.0679979
+# target 99.9% 0.08459
+All done 1541 calls (plus 8 warmup) 52.039 ms avg, 153.4 qps
+
+## run 3: cpu 50ms goroutines=1, -qps 0 -c 32
+Aggregated Function Time : count 2743 avg 0.11725638 +/- 0.0635 min 0.050136959 max 0.722347833
+# target 50% 0.101353
+# target 75% 0.137058
+# target 90% 0.185744
+# target 99% 0.366321
+# target 99.9% 0.675233
+All done 2743 calls (plus 32 warmup) 117.256 ms avg, 271.4 qps
