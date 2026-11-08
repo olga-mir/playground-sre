@@ -1,0 +1,104 @@
+name: Release
+
+run-name: "Release ${{ inputs.version }}"
+
+# Manually triggered. Runs the Go test suite on the commit being released,
+# then tags that commit and creates a GitHub release with generated notes.
+# Images are built and pushed by the build-push workflows on merge to main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.2.3)'
+        required: true
+        type: string
+      title:
+        description: 'Release title (default: "Release <version>")'
+        type: string
+        required: false
+      description:
+        description: 'Custom description to prepend to the release notes'
+        type: string
+        required: false
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write      # create tag + release
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.25'
+
+      - name: Test perf-lab
+        working-directory: ./workloads/perf-lab
+        run: go test ./...
+
+  release:
+    name: Create Release
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must look like v1.2.3 (got '$VERSION')"
+            exit 1
+          fi
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          RELEASE_TITLE: ${{ inputs.title }}
+          RELEASE_DESC: ${{ inputs.description }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          ARGS=("$VERSION")
+          ARGS+=(--title "${RELEASE_TITLE:-Release $VERSION}")
+          ARGS+=(--generate-notes)
+
+          if [ "$PRERELEASE" = "true" ]; then
+            ARGS+=(--prerelease)
+          fi
+
+          if [ -n "$RELEASE_DESC" ]; then
+            ARGS+=(--notes "$RELEASE_DESC")
+          fi
+
+          gh release create "${ARGS[@]}"
