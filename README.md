@@ -47,7 +47,7 @@ Configuration (environment):
 | `ENABLE_CLOUDPROFILER` | Enable GCP Cloud Profiler | `false` |
 | `GCP_PROJECT_ID` | GCP project (required for profiler) | — |
 
-Run it:
+Run:
 
 ```bash
 task perf-lab:run     # run locally on :8080
@@ -65,6 +65,8 @@ Image: `olmigar/experiment-ebpf` · Namespaces: `ebpf-noisy-neighbour` (collecto
 
 Needs nodes tainted/labelled `workload: noisy-node` and the static CPU manager policy. Write-ups of the experiments are in [workloads/ebpf-noisy-neighbour/docs/](workloads/ebpf-noisy-neighbour/docs/).
 
+More details about this experiment can be found in ["Who is stealing my CPU?" talk](https://olga-mir.github.io/Public-Speaking/2026.11.09__CloudCon-Sydney__Catching-Noisy-Neighbours-with-eBPF/).
+
 ## Running the eBPF experiment on your own cluster
 
 No GitOps involved; everything is driven by `task` and `gcloud`.
@@ -77,11 +79,8 @@ export CLUSTER_LOCATION=<zone>         # e.g. australia-southeast1-a (needed on 
 task ebpf:provision-cluster            # zonal GKE cluster + tainted noisy-node pool
 task ebpf:local-build-image            # build and push to your Artifact Registry
 task ebpf:deploy-k8s                   # namespace + collector DaemonSet (daemonset-manual.yaml)
-task ebpf:deploy-monitoring            # PodMonitoring
-task ebpf:deploy-node-exporter         # optional: steal-time metrics
-task ebpf:deploy-ballast               # optional: pin one exclusive core per test node
 
-task ebpf:deploy-victim DIR=stash      # test workloads go to noisy-test
+task ebpf:deploy-victim DIR=stash      # test workloads go to noisy-test. DIR is temp folder to keep text dumps and cgroup labels
 task ebpf:deploy-victim-load DIR=stash
 task ebpf:deploy-bully DIR=stash       # or deploy-bully-io / deploy-bully-net
 
@@ -93,8 +92,7 @@ task ebpf:delete-test-workloads
 task ebpf:delete-cluster
 ```
 
-Tasks that deploy into `noisy-test` require `DIR`: they snapshot CPU pinning into it once the rollout completes. Cluster name, location and kube context are auto-detected from the live cluster; export `CLUSTER_LOCATION` only for a fresh provision or to override. Run `task --list` for the full set.
-
 ## Deployment
 
-Merging to `main` builds and pushes images to Docker Hub via GitHub Actions. The shared `apps-dev` cluster picks them up through Flux; see [docs/gitops-flux.md](docs/gitops-flux.md), which also covers wiring up a fork. For a standalone cluster, build and push your own image and `kubectl apply -k workloads/<name>/k8s` (after updating the `image:` reference).
+Merging to `main` builds and pushes images to Docker Hub via GitHub Actions. The shared `apps-dev` cluster picks them up through Flux; see [docs/gitops-flux.md](docs/gitops-flux.md).
+For a standalone cluster, build and push your own image and `kubectl apply -k workloads/<name>/k8s` (after updating the `image:` reference).
