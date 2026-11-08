@@ -12,7 +12,6 @@ Each workload is a self-contained Go module under `workloads/<name>/` with its o
 - `infra/` — supporting monitoring assets (e.g. Cloud Monitoring dashboards).
 - `docs/` — cross-cutting docs, e.g. [GitOps with Flux](docs/gitops-flux.md).
 - `tutorials/` — hands-on performance tutorials; start at [tutorials/README.md](tutorials/README.md).
-- `demo/` — loose write-ups not yet turned into tutorials.
 - `stash/` — scratch output from experiment runs (cgroup maps, CPU pinning snapshots, screenshots).
 
 ## Workloads

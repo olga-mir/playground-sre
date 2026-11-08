@@ -1,9 +1,8 @@
 # Investigation: the 8.3s p99 run-queue latency reading
 
-Started 2026-09-08, following a review of `ebpf-noisy-neighbor-analysis.md` ahead of the
-CloudCon Sydney talk. The headline number in that report — p99 run-queue latency peaking
-around 8.3 seconds — doesn't hold up as a precise measurement on inspection. This doc tracks
-why, what's been ruled out, and what's still open.
+Started 2026-09-08, following a review of an earlier analysis report. Its headline number
+(p99 run-queue latency peaking around 8.3 seconds) does not hold up as a precise measurement.
+This document tracks why, what has been ruled out, and what is still open.
 
 ## 1. The 8.3s figure is a histogram artifact, not a measured value
 
@@ -27,11 +26,11 @@ Because the merged bucket is given a fake finite `le` of 8.388608s, `histogram_q
 has no way to represent "unbounded." If the p99 rank falls in that merged bucket, Prometheus
 reports something at or near 8.388608s **whether the real values were 8.4s or 400s.**
 
-**Correct framing for the talk:** the measurement shows run-queue latency of **at least
-8.39 seconds, quite possibly much more** — not "8.3 seconds." The current histogram design
-cannot distinguish those cases.
+**Correct framing:** the measurement shows run-queue latency of **at least 8.39 seconds,
+quite possibly much more**, not "8.3 seconds." The histogram design could not distinguish
+those cases.
 
-**Fix, before trusting or presenting this number:**
+**Fix, before trusting this number:**
 - Give the last Prometheus bucket a real `+Inf` `le` so `histogram_quantile` honestly
   returns "can't compute a finite quantile here" instead of a fabricated ceiling, and/or
 - Add a small side-channel (a "max raw value seen" per hist-key, or a ring buffer for
@@ -210,22 +209,20 @@ be real; the latency *magnitudes* attached to them were not.
    then re-run and cross-check against steal time for the same window.
 3. Fix the histogram's top bucket (`+Inf` `le`, or a raw-max side channel) so future runs
    report a trustworthy ceiling instead of a clamped one.
-4. Only after 1–3: decide whether the finding is presentable as-is, or needs a corrected
-   number/story for the talk.
+4. Only after 1–3: decide whether the finding stands as-is or needs a corrected number.
 
 ## 5. Follow-up plan (2026-09-08)
 
-Pushback on treating the "system processes preempt due to I/O noise" theory as an
-alternative explanation for the original spike: it doesn't fit `bully-hog`'s actual
-workload. `stress-ng --cpu 2 --cpu-method matrixprod` is pure in-cache compute — no
-syscalls, no I/O, nothing to trigger a softirq/kworker/kswapd surge. That mechanism needs
-an I/O- or network-heavy neighbor to be a fair test; the CPU-only run never exercised it
-either way, so its absence there isn't counter-evidence against the theory, just a
-mismatched experiment.
+The "system processes preempt due to I/O noise" theory is not a good alternative explanation
+for the original spike: it does not fit `bully-hog`'s actual workload. `stress-ng --cpu 2
+--cpu-method matrixprod` is pure in-cache compute — no syscalls, no I/O, nothing to trigger a
+softirq/kworker/kswapd surge. That mechanism needs an I/O- or network-heavy neighbor to be a
+fair test; the CPU-only run never exercised it either way, so its absence there is not
+counter-evidence against the theory, just a mismatched experiment.
 
 Next steps, as two separate, deliberate tracks:
 
-**Track A — re-run the CPU experiment with the PID-reuse checks from section 4** (today).
+**Track A — re-run the CPU experiment with the PID-reuse checks from section 4.**
 Dump `runq_enqueued` during/after the load test as planned; 4-8s of CFS run-queue latency
 on 2 vCPUs under proportional scheduling doesn't have a sound mechanism behind it (CFS's
 own fairness bounds — `sched_min_granularity_ns` × runnable-task count — don't get you
@@ -303,13 +300,13 @@ scrapes from any run with this collector already contain them.
 
 ---
 
-## 5. Kernel baseline note: EEVDF active on Linux 6.12+
+## 6. Kernel baseline note: EEVDF active on Linux 6.12+
 
-For the GKE cluster (`experiment-ebpf-cluster` on COS Linux 6.12.105+), the kernel runs Peter Zijlstra's **EEVDF** scheduler (merged in Linux 6.6, replacing CFS core fair scheduling). Kernel symbols `pick_eevdf` and `entity_eligible` are confirmed active. See [`eevdf-scheduler-evidence.md`](file:///Users/olga/repos/playground-sre/workloads/ebpf-noisy-neighbour/docs/eevdf-scheduler-evidence.md) for full symbol dumps, sysctl checks, and an analysis of why EEVDF does not prevent run-queue starvation or replace the need for eBPF attribution.
+For the GKE cluster (`experiment-ebpf-cluster` on COS Linux 6.12.105+), the kernel runs Peter Zijlstra's **EEVDF** scheduler (merged in Linux 6.6, replacing CFS core fair scheduling). Kernel symbols `pick_eevdf` and `entity_eligible` are confirmed active. See [section 5 of the scheduler contention report](scheduler-contention-report.md#5-does-eevdf-change-the-result) for the symbol dumps, sysctl checks, and an analysis of why EEVDF does not prevent run-queue starvation or replace the need for eBPF attribution.
 
 ---
 
-## 6. Gotcha: a deleted cgroup relabeled `unresolved` fakes a rate spike (2026-10-17)
+## 7. Gotcha: a deleted cgroup relabeled `unresolved` fakes a rate spike (2026-10-17)
 
 **Symptom.** After redeploying the bully, `ebpf_runq_latency_nanoseconds_count{prev_cgroup="unresolved"}`
 jumped sharply ~1 minute later (the `rate()` panels showed a trapezoid with `[5m]`, a
