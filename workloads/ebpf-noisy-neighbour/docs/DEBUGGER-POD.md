@@ -119,10 +119,10 @@ kubectl -n ebpf-noisy-neighbour exec <debugger-pod> -- cat /tmp/events.jsonl > ~
 
 ### 5. Visualize
 
-Use the visualization script from the scratchpad:
+Use the visualization script in `scripts/`:
 
 ```bash
-python3 viz-scheduler-events.py ~/sched-events.jsonl ~/timeline.html
+python3 scripts/viz-scheduler-events.py ~/sched-events.jsonl ~/timeline.html
 open ~/timeline.html
 ```
 
@@ -238,6 +238,6 @@ The debugger pod will immediately pin the same exclusive core(s) that ballast wa
 
 ## See Also
 
-- `sched-events.bt` — Standalone bpftrace script for scheduler tracing
-- `viz-scheduler-events.py` — Visualization tool for JSONL output
+- `scripts/sched-events.bt` — Standalone bpftrace script for scheduler tracing
+- `scripts/viz-scheduler-events.py` — Visualization tool for JSONL output
 - AGENTS.md — Full task documentation
