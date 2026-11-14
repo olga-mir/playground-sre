@@ -45,7 +45,7 @@ fi
 
 # e2-standard-2 (2 vCPU). Taint + label so only our test workloads land here.
 # --system-config-from-file turns on kubelet cpuManagerPolicy: static, which lets
-# the ballast DaemonSet (k8s/ballast.yaml) claim one exclusive core per node and
+# the debugger DaemonSet (k8s/debugger-pod.yaml) claim one exclusive core per node and
 # confine the noisy-neighbour experiment to the remaining shared CPU.
 # Autoscaling stays off: a second node would let bully/victim land on different
 # nodes, defeating the point of a shared-core contention experiment.

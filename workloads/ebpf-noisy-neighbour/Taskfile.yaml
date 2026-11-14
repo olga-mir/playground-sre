@@ -162,14 +162,14 @@ tasks:
 
   deploy-stack:
     desc: >
-      Deploy the full eBPF experiment stack: daemonset, monitoring, ballast,
+      Deploy the full eBPF experiment stack: daemonset, monitoring, debugger,
       victim, and bully workloads. Uses the image built by local-build-image.
       DIR defaults to $SRE_REPO_STASH if set, else <repo root>/stash.
     cmds:
       - task: deploy-k8s
       - task: deploy-node-exporter
       - task: deploy-monitoring
-      - task: deploy-ballast
+      - task: deploy-debugger
       - task: deploy-victim
       - task: deploy-bpftool
 
@@ -213,7 +213,7 @@ tasks:
     deps: [ensure-namespace]
     cmds:
       - kubectl --context {{.KUBE_CONTEXT}} apply -f k8s/debugger-pod.yaml
-      - echo "ℹ️  Debugger pod deployed. Use 'task ebpf:debug:sched-trace' to collect scheduler events, or 'task ebpf:debug:debugger-shell' for interactive access."
+      - echo "ℹ️  Debugger pod deployed. Use 'task ebpf:debug:debugger-shell' for interactive access (scripts/sched-events.bt collects scheduler events)."
 
   debug:debugger-shell:
     aliases: [debug:debugger_shell, debug:debugger-interactive]
